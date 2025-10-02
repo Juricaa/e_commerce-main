@@ -13,20 +13,10 @@ import {
 } from "@shopify/polaris";
 import { PlusIcon, EditIcon, DeleteIcon } from "@shopify/polaris-icons";
 
-type User = {
-  id_client: number;
-  nom: string;
-  prenom: string;
-  role: 'Livreur' | 'admin';
-  email: string;
-  telephone: string;
-  adresse: string;
-  date_inscription: string;
-};
-
+import type { User } from "../../types/user";
 const initialUsers: User[] = [
   {
-    id_client: 1,
+    idClient: 1,
     nom: "Doe",
     prenom: "John",
     role: "admin",
@@ -36,7 +26,7 @@ const initialUsers: User[] = [
     date_inscription: new Date().toISOString(),
   },
   {
-    id_client: 2,
+    idClient: 2,
     nom: "Smith",
     prenom: "Jane",
     role: "Livreur",
@@ -92,14 +82,14 @@ export function UserManagement() {
   };
 
   const handleDeleteUser = (id: number) => {
-    setUsers(users.filter((u) => u.id_client !== id));
+    setUsers(users.filter((u) => u.idClient !== id));
   };
 
   const handleSaveUser = () => {
     if (!formData.nom || !formData.prenom || !formData.email) return;
 
     const newUser: User = {
-      id_client: editingUser ? editingUser.id_client : Math.max(...users.map(u => u.id_client)) + 1,
+      idClient: editingUser ? editingUser.idClient : Math.max(...users.map(u => u.idClient)) + 1,
       nom: formData.nom,
       prenom: formData.prenom,
       role: formData.role,
@@ -110,7 +100,7 @@ export function UserManagement() {
     };
 
     if (editingUser) {
-      setUsers(users.map(u => u.id_client === editingUser.id_client ? newUser : u));
+      setUsers(users.map(u => u.idClient === editingUser.idClient ? newUser : u));
     } else {
       setUsers([...users, newUser]);
     }
@@ -118,7 +108,7 @@ export function UserManagement() {
   };
 
   const rows = users.map((user) => [
-    user.id_client,
+    user.idClient,
     user.nom,
     user.prenom,
     user.role,
@@ -138,7 +128,7 @@ export function UserManagement() {
         size="slim"
         tone="critical"
         icon={DeleteIcon}
-        onClick={() => handleDeleteUser(user.id_client)}
+        onClick={() => handleDeleteUser(user.idClient)}
       >
         Supprimer
       </Button>

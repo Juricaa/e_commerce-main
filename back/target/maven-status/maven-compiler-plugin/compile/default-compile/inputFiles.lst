@@ -2,6 +2,7 @@ C:\Users\harim\Desktop\e_commerce-main\back\src\main\java\com\supermarcheenligne
 C:\Users\harim\Desktop\e_commerce-main\back\src\main\java\com\supermarcheenligne\SupermarcheEnLigneApplication.java
 C:\Users\harim\Desktop\e_commerce-main\back\src\main\java\com\supermarcheenligne\entity\CommandeProduitId.java
 C:\Users\harim\Desktop\e_commerce-main\back\src\main\java\com\supermarcheenligne\repository\ClientRepository.java
+C:\Users\harim\Desktop\e_commerce-main\back\src\main\java\com\supermarcheenligne\config\CorsConfig.java
 C:\Users\harim\Desktop\e_commerce-main\back\src\main\java\com\supermarcheenligne\controller\CommandeProduitController.java
 C:\Users\harim\Desktop\e_commerce-main\back\src\main\java\com\supermarcheenligne\entity\Produit.java
 C:\Users\harim\Desktop\e_commerce-main\back\src\main\java\com\supermarcheenligne\service\InventaireService.java

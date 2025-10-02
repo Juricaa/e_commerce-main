@@ -1,5 +1,8 @@
-import { FormEvent, useState } from "react";
+// LoginPage.tsx
+import { type FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+// Assurez-vous que le chemin d'importation est correct
+import { authenticateUser } from "../../controllers/authController"; 
 import "../../styles/auth.css";
 
 type UserRole = "admin" | "delivery";
@@ -29,9 +32,12 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [feedback, setFeedback] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (isLoading) return;
 
     if (!email.trim() || !password.trim()) {
       setFeedback("Veuillez saisir votre email et votre mot de passe.");
@@ -39,13 +45,31 @@ export function LoginPage() {
     }
 
     setFeedback("");
+    setIsLoading(true);
 
-    if (role === "admin") {
-      navigate("/admin");
-      return;
+    try {
+      // Appel du Contrôleur pour l'authentification via API
+      const user = await authenticateUser(email.trim(), password.trim(), role);
+
+      if (user) {
+        // Authentification réussie
+        if (user.role === 'admin') {
+          navigate("/admin");
+        } else if (user.role === 'delivery') {
+          // Note : Le rôle dans l'objet User est 'Livreur'
+          navigate("/delivery", { state: { operator: user.email } });
+        }
+      } else {
+      
+        // Échec de l'authentification (identifiants invalides ou erreur API gérée)
+        setFeedback("Échec de la connexion. Vérifiez votre email, votre mot de passe et le rôle sélectionné.");
+      }
+    } catch (error) {
+      // Cas peu probable car le contrôleur catch déjà les erreurs, mais bonne pratique
+      setFeedback("Une erreur inattendue est survenue. Veuillez réessayer.");
+    } finally {
+      setIsLoading(false);
     }
-
-    navigate("/delivery", { state: { operator: email.trim() } });
   };
 
   return (
@@ -78,6 +102,7 @@ export function LoginPage() {
                   onClick={() => setRole(option.value)}
                   role="tab"
                   aria-selected={isSelected}
+                  disabled={isLoading}
                 >
                   <span className="role-label">{option.label}</span>
                   <span className="role-description">{option.description}</span>
@@ -96,6 +121,7 @@ export function LoginPage() {
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="prenom.nom@entreprise.com"
                 required
+                disabled={isLoading}
               />
             </label>
 
@@ -108,13 +134,20 @@ export function LoginPage() {
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="Votre mot de passe"
                 required
+                disabled={isLoading}
               />
             </label>
 
             {feedback ? <p className="auth-feedback">{feedback}</p> : null}
 
-            <button className="auth-submit" type="submit">
-              Continuer vers l'espace {role === "admin" ? "administrateur" : "livreur"}
+            <button 
+              className="auth-submit" 
+              type="submit"
+              disabled={isLoading}
+            >
+              {isLoading 
+                ? "Connexion en cours..." 
+                : `Continuer vers l'espace ${role === "admin" ? "administrateur" : "livreur"}`}
             </button>
           </form>
 

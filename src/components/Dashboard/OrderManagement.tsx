@@ -16,7 +16,7 @@ import { PlusIcon, EditIcon, DeleteIcon } from "@shopify/polaris-icons";
 
 type Order = {
   id_commande: number;
-  id_client: number;
+  idClient: number;
   client_nom: string;
   produits: Array<{ id_produit: number; nom: string; quantite: number; prix: number }>;
   total: number;
@@ -28,7 +28,7 @@ type Order = {
 const initialOrders: Order[] = [
   {
     id_commande: 1,
-    id_client: 1,
+    idClient: 1,
     client_nom: "John Doe",
     produits: [
       { id_produit: 1, nom: "Produit 1", quantite: 2, prix: 10.99 },
@@ -41,7 +41,7 @@ const initialOrders: Order[] = [
   },
   {
     id_commande: 2,
-    id_client: 2,
+    idClient: 2,
     client_nom: "Jane Smith",
     produits: [
       { id_produit: 1, nom: "Produit 1", quantite: 1, prix: 10.99 },
@@ -67,7 +67,7 @@ export function OrderManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [formData, setFormData] = useState({
-    id_client: "",
+    idClient: "",
     client_nom: "",
     produits: "",
     total: "",
@@ -78,7 +78,7 @@ export function OrderManagement() {
   const handleAddOrder = () => {
     setEditingOrder(null);
     setFormData({
-      id_client: "",
+      idClient: "",
       client_nom: "",
       produits: "",
       total: "",
@@ -91,7 +91,7 @@ export function OrderManagement() {
   const handleEditOrder = (order: Order) => {
     setEditingOrder(order);
     setFormData({
-      id_client: order.id_client.toString(),
+      idClient: order.idClient.toString(),
       client_nom: order.client_nom,
       produits: JSON.stringify(order.produits),
       total: order.total.toString(),
@@ -106,7 +106,7 @@ export function OrderManagement() {
   };
 
   const handleSaveOrder = () => {
-    if (!formData.id_client || !formData.client_nom || !formData.total) return;
+    if (!formData.idClient || !formData.client_nom || !formData.total) return;
 
     let produits: Order['produits'] = [];
     try {
@@ -117,7 +117,7 @@ export function OrderManagement() {
 
     const newOrder: Order = {
       id_commande: editingOrder ? editingOrder.id_commande : Math.max(...orders.map(o => o.id_commande)) + 1,
-      id_client: parseInt(formData.id_client),
+      idClient: parseInt(formData.idClient),
       client_nom: formData.client_nom,
       produits,
       total: parseFloat(formData.total),
@@ -221,8 +221,8 @@ export function OrderManagement() {
               <TextField
                 label="ID Client"
                 type="number"
-                value={formData.id_client}
-                onChange={(value) => setFormData({ ...formData, id_client: value })}
+                value={formData.idClient}
+                onChange={(value) => setFormData({ ...formData, idClient: value })}
                 autoComplete="off"
               />
               <TextField
