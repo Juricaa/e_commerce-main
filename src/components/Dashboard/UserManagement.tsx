@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Layout,
   Card,
@@ -10,51 +10,64 @@ import {
   FormLayout,
   TextField,
   Select,
+  Spinner, // Ajout pour l'indicateur de chargement
 } from "@shopify/polaris";
 import { PlusIcon, EditIcon, DeleteIcon } from "@shopify/polaris-icons";
 
 import type { User } from "../../types/user";
-const initialUsers: User[] = [
-  {
-    idClient: 1,
-    nom: "Doe",
-    prenom: "John",
-    role: "admin",
-    email: "john.doe@example.com",
-    telephone: "+1234567890",
-    adresse: "123 Main St, City, Country",
-    date_inscription: new Date().toISOString(),
-  },
-  {
-    idClient: 2,
-    nom: "Smith",
-    prenom: "Jane",
-    role: "Livreur",
-    email: "jane.smith@example.com",
-    telephone: "+0987654321",
-    adresse: "456 Elm St, City, Country",
-    date_inscription: new Date().toISOString(),
-  },
-];
+// 🚨 Importation des fonctions du contrôleur d'API 🚨
+import {
+  getAllClients,
+  createClient,
+  updateClient,
+  deleteClient,
+} from "../../controllers/userController"; // Assurez-vous que le chemin est correct
 
+// Configuration des options de rôle (pour l'affichage et l'envoi à l'API)
 const roleOptions = [
   { label: 'Admin', value: 'admin' },
-  { label: 'Livreur', value: 'Livreur' },
+  { label: 'Livreur', value: 'delivery' }, // Utilisez le rôle 'Livreur' si c'est ce que l'API attend
 ];
 
+// Définit le type pour les données du formulaire, incluant le mot de passe
+interface FormData {
+  nom: string;
+  prenom: string;
+  role: 'delivery' | 'admin';
+  email: string;
+  telephone: string;
+  adresse: string;
+  password?: string; // Ajout du mot de passe
+}
+
 export function UserManagement() {
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     nom: "",
     prenom: "",
-    role: "admin" as 'Livreur' | 'admin',
+    role: "admin",
     email: "",
     telephone: "",
     adresse: "",
+    password: "", // Initialisation du mot de passe
   });
 
+  // 1. 🚨 LOGIQUE POUR RÉCUPÉRER LES UTILISATEURS (READ) 🚨
+  const fetchUsers = useCallback(async () => {
+    setIsLoading(true);
+    const clients = await getAllClients();
+    setUsers(clients);
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  // Gère l'ajout d'un nouvel utilisateur
   const handleAddUser = () => {
     setEditingUser(null);
     setFormData({
@@ -64,49 +77,85 @@ export function UserManagement() {
       email: "",
       telephone: "",
       adresse: "",
+      password: "", // Le mot de passe est obligatoire pour la création
     });
     setIsModalOpen(true);
   };
 
+  // Gère l'édition d'un utilisateur existant
   const handleEditUser = (user: User) => {
     setEditingUser(user);
     setFormData({
       nom: user.nom,
       prenom: user.prenom,
-      role: user.role,
+      role: user.role as 'delivery' | 'admin',
       email: user.email,
       telephone: user.telephone,
       adresse: user.adresse,
+      password: "", // Le mot de passe est souvent vide lors de l'édition et envoyé seulement si modifié
     });
     setIsModalOpen(true);
   };
 
-  const handleDeleteUser = (id: number) => {
-    setUsers(users.filter((u) => u.idClient !== id));
+  // 2. 🚨 LOGIQUE POUR SUPPRIMER UN UTILISATEUR (DELETE) 🚨
+  const handleDeleteUser = async (id: number) => {
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")) {
+      const success = await deleteClient(id);
+      if (success) {
+        // Rafraîchir la liste après une suppression réussie
+        await fetchUsers(); 
+        console.log(`Client ${id} supprimé.`);
+      } else {
+        alert("Échec de la suppression de l'utilisateur.");
+      }
+    }
   };
 
-  const handleSaveUser = () => {
+  // 3. 🚨 LOGIQUE POUR SAUVEGARDER/MODIFIER (CREATE/UPDATE) 🚨
+  const handleSaveUser = async () => {
     if (!formData.nom || !formData.prenom || !formData.email) return;
 
-    const newUser: User = {
-      idClient: editingUser ? editingUser.idClient : Math.max(...users.map(u => u.idClient)) + 1,
+    setIsLoading(true);
+    let success = false;
+    
+    // Données de base à envoyer à l'API
+    const payload = {
       nom: formData.nom,
       prenom: formData.prenom,
       role: formData.role,
       email: formData.email,
       telephone: formData.telephone,
       adresse: formData.adresse,
-      date_inscription: editingUser ? editingUser.date_inscription : new Date().toISOString(),
+      // Le mot de passe est inclus uniquement s'il est fourni (création ou mise à jour)
+      ...(formData.password && { password: formData.password }),
     };
 
     if (editingUser) {
-      setUsers(users.map(u => u.idClient === editingUser.idClient ? newUser : u));
+      // MODE MISE À JOUR (PUT)
+      const updatedUser = await updateClient(editingUser.idClient, payload as Partial<User>);
+      success = !!updatedUser;
     } else {
-      setUsers([...users, newUser]);
+      // MODE CRÉATION (POST)
+      // Le mot de passe est obligatoire pour la création.
+      if (!formData.password) {
+        alert("Le mot de passe est obligatoire pour la création d'un nouvel utilisateur.");
+        setIsLoading(false);
+        return;
+      }
+      const newUser = await createClient(payload as Omit<User, 'idClient' | 'dateInscription'> & { password: string });
+      success = !!newUser;
     }
-    setIsModalOpen(false);
+
+    if (success) {
+      await fetchUsers(); // Rafraîchir la liste après sauvegarde
+      setIsModalOpen(false);
+    } else {
+      alert("Erreur lors de l'enregistrement de l'utilisateur. Vérifiez la console pour plus de détails.");
+    }
+    setIsLoading(false);
   };
 
+  // Préparation des lignes pour la DataTable
   const rows = users.map((user) => [
     user.idClient,
     user.nom,
@@ -115,12 +164,14 @@ export function UserManagement() {
     user.email,
     user.telephone,
     user.adresse,
-    new Date(user.date_inscription).toLocaleDateString(),
-    <div style={{ display: "flex", gap: "8px" }}>
+    // Note: Utilisation de 'dateInscription' pour correspondre au format de l'API
+    new Date(user.dateInscription).toLocaleDateString(), 
+    <div key={user.idClient} style={{ display: "flex", gap: "8px" }}>
       <Button
         size="slim"
         icon={EditIcon}
         onClick={() => handleEditUser(user)}
+        disabled={isLoading}
       >
         Modifier
       </Button>
@@ -129,6 +180,7 @@ export function UserManagement() {
         tone="critical"
         icon={DeleteIcon}
         onClick={() => handleDeleteUser(user.idClient)}
+        disabled={isLoading}
       >
         Supprimer
       </Button>
@@ -142,16 +194,22 @@ export function UserManagement() {
           <Text variant="headingLg" as="h1">
             Gestion des Utilisateurs
           </Text>
-          <Button variant="primary" icon={PlusIcon} onClick={handleAddUser}>
+          <Button variant="primary" icon={PlusIcon} onClick={handleAddUser} disabled={isLoading}>
             Ajouter un Utilisateur
           </Button>
         </div>
         <Card>
-          <DataTable
-            columnContentTypes={["numeric", "text", "text", "text", "text", "text", "text", "text", "text"]}
-            headings={["ID", "Nom", "Prénom", "Rôle", "Email", "Téléphone", "Adresse", "Date d'inscription", "Actions"]}
-            rows={rows}
-          />
+          {isLoading ? (
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+              <Spinner accessibilityLabel="Chargement des utilisateurs" size="large" />
+            </div>
+          ) : (
+            <DataTable
+              columnContentTypes={["numeric", "text", "text", "text", "text", "text", "text", "text", "text"]}
+              headings={["ID", "Nom", "Prénom", "Rôle", "Email", "Téléphone", "Adresse", "Date d'inscription", "Actions"]}
+              rows={rows}
+            />
+          )}
         </Card>
       </Layout.Section>
 
@@ -162,6 +220,8 @@ export function UserManagement() {
         primaryAction={{
           content: "Enregistrer",
           onAction: handleSaveUser,
+          loading: isLoading,
+          disabled: isLoading,
         }}
         secondaryActions={[
           {
@@ -189,7 +249,7 @@ export function UserManagement() {
                 label="Rôle"
                 options={roleOptions}
                 value={formData.role}
-                onChange={(value) => setFormData({ ...formData, role: value as 'Livreur' | 'admin' })}
+                onChange={(value) => setFormData({ ...formData, role: value as 'delivery' | 'admin' })}
               />
               <TextField
                 label="Email"
@@ -197,6 +257,15 @@ export function UserManagement() {
                 value={formData.email}
                 onChange={(value) => setFormData({ ...formData, email: value })}
                 autoComplete="off"
+              />
+              {/* Le mot de passe est requis seulement si on ajoute ou si on veut le modifier */}
+              <TextField
+                label="Mot de passe"
+                type="password"
+                value={formData.password}
+                onChange={(value) => setFormData({ ...formData, password: value })}
+                autoComplete="new-password"
+                placeholder={editingUser ? "Laisser vide si inchangé" : "Obligatoire pour la création"}
               />
               <TextField
                 label="Téléphone"

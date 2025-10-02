@@ -6,7 +6,7 @@ export type User = {
     email: string;
     telephone: string;
     adresse: string;
-    date_inscription: string;
+    dateInscription: string;
     password: string;
   };
   

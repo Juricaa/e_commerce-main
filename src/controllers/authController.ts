@@ -55,13 +55,7 @@ export async function authenticateUser(
         console.error("Erreur logique lors de l'authentification simulée :", error);
         return null; 
       }
-      // Vérification que le rôle retourné correspond bien au rôle attendu
-      // if (userData.role === roleToMatch) {
-      //     // Si l'API renvoie un token, vous devrez le stocker ici (localStorage/Cookies)
-      //     return userData;
-      // }
-      // // Si le rôle ne correspond pas (erreur logique côté API ou vue)
-      // return null; 
+    
     }
 
     // Si l'API renvoie 401 (Unauthorized) ou 403 (Forbidden)
