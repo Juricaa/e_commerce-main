@@ -21,7 +21,9 @@ import {
   createClient,
   updateClient,
   deleteClient,
-} from "../../controllers/userController"; // Assurez-vous que le chemin est correct
+} from "../../controllers/userController"; 
+
+import type { NewClientData } from "../../controllers/userController";// Assurez-vous que le chemin est correct
 
 // Configuration des options de rôle (pour l'affichage et l'envoi à l'API)
 const roleOptions = [
@@ -142,7 +144,9 @@ export function UserManagement() {
         setIsLoading(false);
         return;
       }
-      const newUser = await createClient(payload as Omit<User, 'idClient' | 'dateInscription'> & { password: string });
+
+      
+      const newUser = await createClient(payload as NewClientData); 
       success = !!newUser;
     }
 
