@@ -32,7 +32,7 @@ export async function getAllClients(): Promise<User[]> {
 }
 
 
-type NewClientData = Omit<User, 'idClient' | 'date_inscription' | 'commandes'> & { password: string };
+export type NewClientData = Omit<User, 'idClient' | 'date_inscription' | 'commandes'> & { password: string };
 
 /**
  * Crée un nouveau client via l'API (POST).

@@ -19,6 +19,7 @@ public class Client {
     private String email;
     private String telephone;
     private String adresse;
+    private String password;
     private LocalDate dateInscription;
 
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL)
