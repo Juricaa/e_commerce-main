@@ -5,6 +5,6 @@ export type Product = {
     prix: number;
     stock: number;
     categorie: string;
-    dateAjout: string;
+    dateAjout: Date;
     image: string;
-  };
+  };    

@@ -4,6 +4,7 @@ import com.supermarcheenligne.entity.Produit;
 import com.supermarcheenligne.service.ProduitService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,10 +33,34 @@ public class ProduitController {
     }
 
     @PutMapping("/{id}")
-    public Produit update(@PathVariable Long id, @RequestBody Produit produit) {
-        produit.setIdProduit(id);
-        return produitService.save(produit);
+
+public ResponseEntity<Produit> update(@PathVariable Long id, @RequestBody Produit produitDetails) {
+    
+    Optional<Produit> produitOptional = produitService.findById(id); 
+
+    if (!produitOptional.isPresent()) {
+        return ResponseEntity.notFound().build(); 
     }
+
+    Produit existingProduit = produitOptional.get();
+
+    existingProduit.setNomProduit(produitDetails.getNomProduit());
+    existingProduit.setDescription(produitDetails.getDescription());
+    existingProduit.setPrix(produitDetails.getPrix());
+    existingProduit.setStock(produitDetails.getStock());
+    existingProduit.setCategorie(produitDetails.getCategorie());
+    
+ 
+    Produit updatedProduit = produitService.save(existingProduit);
+
+    return ResponseEntity.ok(updatedProduit);
+}
+
+    // @PutMapping("/{id}")
+    // public Produit update(@PathVariable Long id, @RequestBody Produit produit) {
+    //     produit.setIdProduit(id);
+    //     return produitService.save(produit);
+    // }
 
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {

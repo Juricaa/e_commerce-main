@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Layout,
   Card,
@@ -9,122 +9,163 @@ import {
   Form,
   FormLayout,
   TextField,
+  Spinner, // Ajout pour l'indicateur de chargement
 } from "@shopify/polaris";
 import { PlusIcon, EditIcon, DeleteIcon } from "@shopify/polaris-icons";
 
-type Product = {
-  id_produit: number;
-  nom_produit: string;
-  description: string;
-  prix: number;
-  stock: number;
-  categorie: string;
-  date_ajout: string;
-  image: string;
-};
+// Assurez-vous d'importer vos fonctions du contrôleur d'API et les types
+import { 
+    getAllProducts, 
+    createProduct, 
+    updateProduct, 
+    deleteProduct
+} from "../../controllers/produitController"; 
 
-const initialProducts: Product[] = [
-  {
-    id_produit: 1,
-    nom_produit: "Produit 1",
-    description: "Description du produit 1",
-    prix: 10.99,
-    stock: 100,
-    categorie: "Catégorie A",
-    date_ajout: new Date().toISOString(),
-    image: "https://via.placeholder.com/100",
-  },
-  {
-    id_produit: 2,
-    nom_produit: "Produit 2",
-    description: "Description du produit 2",
-    prix: 25.50,
-    stock: 50,
-    categorie: "Catégorie B",
-    date_ajout: new Date().toISOString(),
-    image: "https://via.placeholder.com/100",
-  },
-];
+import type {NewProductData,
+  UpdateProductData} from "../../controllers/produitController"
+  
+import type { Product } from "../../types/produit"; // Assurez-vous que le chemin est correct
 
-export function ProductManagement() {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [formData, setFormData] = useState({
-    nom_produit: "",
+
+// Type pour les données du formulaire (tous les champs sont des chaînes)
+interface FormData {
+    nomProduit: string;
+    description: string;
+    prix: string;
+    stock: string;
+    categorie: string;
+    image: string;
+    dateAjout: string; // Changer le type de Date à string
+}
+
+// Initialisation des données (vide car elles seront chargées par l'API)
+const initialFormData: FormData = {
+    nomProduit: "",
     description: "",
     prix: "",
     stock: "",
     categorie: "",
     image: "",
-  });
+    dateAjout: "",
+};
 
+
+export function ProductManagement() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [formData, setFormData] = useState<FormData>(initialFormData);
+
+  // 1. 🚨 LOGIQUE POUR RÉCUPÉRER LES PRODUITS (READ) 🚨
+  const fetchProducts = useCallback(async () => {
+    setIsLoading(true);
+    const productList = await getAllProducts();
+    setProducts(productList);
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchProducts();
+    
+  }, [fetchProducts]);
+
+  // Gère l'ajout d'un nouveau produit
   const handleAddProduct = () => {
     setEditingProduct(null);
-    setFormData({
-      nom_produit: "",
-      description: "",
-      prix: "",
-      stock: "",
-      categorie: "",
-      image: "",
-    });
+    setFormData(initialFormData);
     setIsModalOpen(true);
   };
 
+  // Gère l'édition d'un produit existant
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
     setFormData({
-      nom_produit: product.nom_produit,
+      nomProduit: product.nomProduit,
       description: product.description,
       prix: product.prix.toString(),
       stock: product.stock.toString(),
       categorie: product.categorie,
       image: product.image,
+      dateAjout: new Date(product.dateAjout).toISOString().split('T')[0], // Formater la date pour l'input type="date"
     });
+    
     setIsModalOpen(true);
   };
 
-  const handleDeleteProduct = (id: number) => {
-    setProducts(products.filter((p) => p.id_produit !== id));
+  // 2. 🚨 LOGIQUE POUR SUPPRIMER UN PRODUIT (DELETE) 🚨
+  const handleDeleteProduct = async (id: number) => {
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce produit ?")) {
+      setIsLoading(true);
+      const success = await deleteProduct(id);
+      if (success) {
+        await fetchProducts(); 
+        console.log(`Produit ${id} supprimé.`);
+      } else {
+        alert("Échec de la suppression du produit.");
+      }
+      setIsLoading(false);
+    }
   };
 
-  const handleSaveProduct = () => {
-    if (!formData.nom_produit || !formData.prix) return;
+  // 3. 🚨 LOGIQUE POUR SAUVEGARDER/MODIFIER (CREATE/UPDATE) 🚨
+  const handleSaveProduct = async () => {
+    // Validation minimale
+    if (!formData.nomProduit || !formData.prix || isNaN(parseFloat(formData.prix))) {
+        alert("Nom et Prix sont requis et doivent être valides.");
+        return;
+    }
 
-    const newProduct: Product = {
-      id_produit: editingProduct ? editingProduct.id_produit : Math.max(...products.map(p => p.id_produit)) + 1,
-      nom_produit: formData.nom_produit,
+    setIsLoading(true);
+    let success = false;
+    
+    // Conversion des chaînes en nombres pour l'API
+    const payload: NewProductData = {
+      nomProduit: formData.nomProduit,
       description: formData.description,
       prix: parseFloat(formData.prix),
       stock: parseInt(formData.stock) || 0,
       categorie: formData.categorie,
-      date_ajout: editingProduct ? editingProduct.date_ajout : new Date().toISOString(),
       image: formData.image,
+      
     };
 
     if (editingProduct) {
-      setProducts(products.map(p => p.id_produit === editingProduct.id_produit ? newProduct : p));
+      // MODE MISE À JOUR (PUT)
+      // On utilise UpdateProductData car c'est un type Partiel dans le contrôleur
+      const updatedProduct = await updateProduct(editingProduct.idProduit, payload as UpdateProductData);
+      success = !!updatedProduct;
     } else {
-      setProducts([...products, newProduct]);
+      // MODE CRÉATION (POST)
+      const newProduct = await createProduct(payload);
+      success = !!newProduct;
     }
-    setIsModalOpen(false);
+
+    if (success) {
+      await fetchProducts(); // Rafraîchir la liste après sauvegarde
+      setIsModalOpen(false);
+    } else {
+      alert("Erreur lors de l'enregistrement du produit. Vérifiez la console pour plus de détails.");
+    }
+    setIsLoading(false);
   };
 
+  // Préparation des lignes pour la DataTable
   const rows = products.map((product) => [
-    product.id_produit,
-    <img src={product.image} alt={product.nom_produit} style={{ width: "50px", height: "50px" }} />,
-    product.nom_produit,
+    product.idProduit,
+    <img key={`img-${product.idProduit}`} src={product.image || "https://via.placeholder.com/50"} alt={product.nomProduit} style={{ width: "50px", height: "50px", objectFit: 'cover' }} />,
+    product.nomProduit,
     product.description,
-    `${product.prix}€`,
+    `${product.prix.toFixed(2)}Ar`,
     product.stock,
     product.categorie,
-    new Date(product.date_ajout).toLocaleDateString(),
-    <div style={{ display: "flex", gap: "8px" }}>
+    new Date(product.dateAjout).toLocaleDateString(),
+    <div key={`actions-${product.idProduit}`} style={{ display: "flex", gap: "8px" }}>
       <Button
         size="slim"
         icon={EditIcon}
         onClick={() => handleEditProduct(product)}
+        disabled={isLoading}
       >
         Modifier
       </Button>
@@ -132,7 +173,8 @@ export function ProductManagement() {
         size="slim"
         tone="critical"
         icon={DeleteIcon}
-        onClick={() => handleDeleteProduct(product.id_produit)}
+        onClick={() => handleDeleteProduct(product.idProduit)}
+        disabled={isLoading}
       >
         Supprimer
       </Button>
@@ -146,16 +188,22 @@ export function ProductManagement() {
           <Text variant="headingLg" as="h1">
             Gestion des Produits
           </Text>
-          <Button variant="primary" icon={PlusIcon} onClick={handleAddProduct}>
+          <Button variant="primary" icon={PlusIcon} onClick={handleAddProduct} disabled={isLoading}>
             Ajouter un Produit
           </Button>
         </div>
         <Card>
-          <DataTable
-            columnContentTypes={["numeric", "text", "text", "text", "numeric", "numeric", "text", "text", "text"]}
-            headings={["ID", "Image", "Nom", "Description", "Prix", "Stock", "Catégorie", "Date d'ajout", "Actions"]}
-            rows={rows}
-          />
+          {isLoading ? (
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+              <Spinner accessibilityLabel="Chargement des produits" size="large" />
+            </div>
+          ) : (
+            <DataTable
+              columnContentTypes={["numeric", "text", "text", "text", "numeric", "numeric", "text", "text", "text"]}
+              headings={["ID", "Image", "Nom", "Description", "Prix", "Stock", "Catégorie", "Date d'ajout", "Actions"]}
+              rows={rows}
+            />
+          )}
         </Card>
       </Layout.Section>
 
@@ -166,6 +214,8 @@ export function ProductManagement() {
         primaryAction={{
           content: "Enregistrer",
           onAction: handleSaveProduct,
+          loading: isLoading,
+          disabled: isLoading,
         }}
         secondaryActions={[
           {
@@ -179,8 +229,8 @@ export function ProductManagement() {
             <FormLayout>
               <TextField
                 label="Nom du Produit"
-                value={formData.nom_produit}
-                onChange={(value) => setFormData({ ...formData, nom_produit: value })}
+                value={formData.nomProduit}
+                onChange={(value) => setFormData({ ...formData, nomProduit: value })}
                 autoComplete="off"
               />
               <TextField
@@ -215,6 +265,15 @@ export function ProductManagement() {
                 label="Image URL"
                 value={formData.image}
                 onChange={(value) => setFormData({ ...formData, image: value })}
+                autoComplete="off"
+              />
+
+              <TextField
+                // visible={false} // 'visible' n'est pas une prop valide pour TextField
+                type="date"
+                label="Date d'ajout"
+                value={formData.dateAjout || ''} // Assurez-vous que la valeur est une chaîne vide si non définie
+                onChange={(value) => setFormData({ ...formData, dateAjout: value })}
                 autoComplete="off"
               />
             </FormLayout>
