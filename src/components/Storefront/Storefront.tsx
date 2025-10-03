@@ -1,17 +1,12 @@
-import { FormEvent, useMemo, useState } from "react";
+import type { FormEvent } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react"; // Ajout de useEffect et useCallback
 import { Link } from "react-router-dom";
 import { toDataURL } from "qrcode";
 import "../../styles/storefront.css";
 import logo from "../../assets/logo.png";
-
-type Product = {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image: string;
-  tag?: string;
-};
+import type { Product } from "../../types/produit";
+// Importation de la fonction de l'API
+import { getAllProducts } from "../../controllers/produitController";
 
 type JournalEntry = {
   id: string;
@@ -35,63 +30,17 @@ type OrderQr = {
   dataUrl: string;
 };
 
-const currencyFormatter = new Intl.NumberFormat("fr-FR", {
+const currencyFormatter = new Intl.NumberFormat("fr-MG", {
   style: "currency",
-  currency: "EUR",
+  currency: "MGA",
 });
-
+// REMARQUE: La liste statique featuredProducts n'est plus utilisée, elle sera remplacée
+// par l'état `products` mis à jour via l'API.
+/*
 const featuredProducts: Product[] = [
-  {
-    id: "linen-shirt",
-    name: "Seaside Linen Shirt",
-    description: "Breathable linen with a relaxed silhouette for effortless summer styling.",
-    price: 68,
-    image:
-      "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=960&q=80",
-    tag: "Bestseller",
-  },
-  {
-    id: "wrap-dress",
-    name: "Aurora Wrap Dress",
-    description: "Soft satin finish with an adjustable wrap waist and flowing midi skirt.",
-    price: 112,
-    image:
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=960&q=80",
-  },
-  {
-    id: "woven-tote",
-    name: "Harbor Woven Tote",
-    description: "Handwoven raffia tote with leather handles and roomy interior pockets.",
-    price: 84,
-    image:
-      "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=960&q=80",
-    tag: "Limited",
-  },
-  {
-    id: "tailored-trousers",
-    name: "Paragon Tailored Trousers",
-    description: "Cropped pleated trousers crafted from lightweight Italian wool.",
-    price: 96,
-    image:
-      "https://images.unsplash.com/photo-1503341455253-b2e723bb3dbb?auto=format&fit=crop&w=960&q=80",
-  },
-  {
-    id: "silk-scarf",
-    name: "Atelier Silk Scarf",
-    description: "Illustrated silk scarf finished with rolled hems and hand-painted edges.",
-    price: 58,
-    image:
-      "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&w=960&q=80",
-  },
-  {
-    id: "leather-sandals",
-    name: "Solstice Leather Sandals",
-    description: "Minimalist strappy sandals made with vegetable-tanned leather.",
-    price: 89,
-    image:
-      "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=960&q=80",
-  },
+  // ... (Produits statiques enlevés)
 ];
+*/
 
 const journalHighlights: JournalEntry[] = [
   {
@@ -120,6 +69,10 @@ const journalHighlights: JournalEntry[] = [
 const formatPrice = (value: number) => currencyFormatter.format(value);
 
 export function Storefront() {
+  // 1. Ajout des états pour les produits et le chargement
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [cartItems, setCartItems] = useState<CartLine[]>([]);
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
@@ -129,22 +82,41 @@ export function Storefront() {
   const [orderQr, setOrderQr] = useState<OrderQr | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // 2. Définition de la fonction pour récupérer les produits
+  const fetchProducts = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const productList = await getAllProducts();
+      setProducts(productList);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des produits:", error);
+      // Optionnel: Définir un état d'erreur pour l'utilisateur
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // 3. Appel de la fonction de récupération au montage du composant
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+  // --- Le reste du composant reste le même, sauf la section d'affichage des produits ---
   const cartCount = useMemo(
     () => cartItems.reduce((total, line) => total + line.quantity, 0),
     [cartItems],
   );
 
   const cartTotal = useMemo(
-    () => cartItems.reduce((total, line) => total + line.product.price * line.quantity, 0),
+    () => cartItems.reduce((total, line) => total + line.product.prix * line.quantity, 0),
     [cartItems],
   );
 
   const handleAddToCart = (product: Product) => {
     setCartItems((previous) => {
-      const existingLine = previous.find((line) => line.product.id === product.id);
+      const existingLine = previous.find((line) => line.product.idProduit === product.idProduit);
       if (existingLine) {
         return previous.map((line) =>
-          line.product.id === product.id
+          line.product.idProduit === product.idProduit
             ? { ...line, quantity: line.quantity + 1 }
             : line,
         );
@@ -154,11 +126,11 @@ export function Storefront() {
     setFeedback(null);
   };
 
-  const updateQuantity = (productId: string, delta: number) => {
+  const updateQuantity = (productId: number, delta: number) => {
     setCartItems((previous) =>
       previous
         .map((line) =>
-          line.product.id === productId
+          line.product.idProduit === productId
             ? { ...line, quantity: Math.max(1, line.quantity + delta) }
             : line,
         )
@@ -166,8 +138,8 @@ export function Storefront() {
     );
   };
 
-  const removeFromCart = (productId: string) => {
-    setCartItems((previous) => previous.filter((line) => line.product.id !== productId));
+  const removeFromCart = (productId: number) => {
+    setCartItems((previous) => previous.filter((line) => line.product.idProduit !== productId));
   };
 
   const resetCheckoutForm = () => {
@@ -198,9 +170,9 @@ export function Storefront() {
       note: customerNote.trim(),
       total: cartTotal,
       items: cartItems.map((line) => ({
-        id: line.product.id,
+        id: line.product.idProduit,
         quantity: line.quantity,
-        price: line.product.price,
+        price: line.product.prix,
       })),
       createdAt: new Date().toISOString(),
     };
@@ -304,34 +276,36 @@ export function Storefront() {
               Six silhouettes choisies pour leur savoir-faire, leur polyvalence et leur design durable.
             </p>
           </div>
-          <div className="product-grid">
-            {featuredProducts.map((product) => (
-              <article key={product.id} className="product-card">
-                <div className="product-image-wrapper">
-                  <img src={product.image} alt={product.name} />
-                  {product.tag ? (
-                    <span className="product-tag" role="status">
-                      {product.tag}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="product-details">
-                  <h3 className="product-name">{product.name}</h3>
-                  <p className="product-description">{product.description}</p>
-                  <div className="product-footer">
-                    <span className="product-price">{formatPrice(product.price)}</span>
-                    <button
-                      className="product-action"
-                      type="button"
-                      onClick={() => handleAddToCart(product)}
-                    >
-                      Ajouter au panier
-                    </button>
+          {/* 4. Affichage conditionnel basé sur l'état de chargement */}
+          {isLoading ? (
+            <div className="loading-message">Chargement des produits...</div>
+          ) : (
+            <div className="product-grid">
+              {products.map((product) => (
+                <article key={product.idProduit} className="product-card">
+                  <div className="product-image-wrapper">
+                    <img src={product.image} alt={product.nomProduit} />
                   </div>
-                </div>
-              </article>
-            ))}
-          </div>
+                  <div className="product-details">
+                    <h3 className="product-name">{product.nomProduit}</h3>
+                    <p className="product-description">{product.description}</p>
+                    <div className="product-footer">
+                      <span className="product-price">{formatPrice(product.prix)}</span> 
+                      <button
+                        className="product-action"
+                        type="button"
+                        onClick={() => handleAddToCart(product)}
+                        // Désactivation si le produit est en rupture de stock (facultatif)
+                        disabled={product.stock <= 0} 
+                      >
+                        {product.stock > 0 ? "Ajouter au panier" : "Indisponible"}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="checkout-section" id="checkout">
@@ -353,16 +327,16 @@ export function Storefront() {
               ) : (
                 <ul className="cart-list">
                   {cartItems.map((line) => (
-                    <li key={line.product.id} className="cart-item">
+                    <li key={line.product.idProduit} className="cart-item">
                       <div className="cart-item-details">
-                        <h4>{line.product.name}</h4>
-                        <p>{formatPrice(line.product.price)}</p>
+                        <h4>{line.product.nomProduit}</h4>
+                        <p>{formatPrice(line.product.prix)}</p>
                       </div>
                       <div className="cart-item-controls">
                         <div className="quantity-controls" aria-label="Modifier la quantité">
                           <button
                             type="button"
-                            onClick={() => updateQuantity(line.product.id, -1)}
+                            onClick={() => updateQuantity(line.product.idProduit, -1)}
                             aria-label="Diminuer la quantité"
                           >
                             −
@@ -370,7 +344,7 @@ export function Storefront() {
                           <span>{line.quantity}</span>
                           <button
                             type="button"
-                            onClick={() => updateQuantity(line.product.id, 1)}
+                            onClick={() => updateQuantity(line.product.idProduit, 1)}
                             aria-label="Augmenter la quantité"
                           >
                             +
@@ -379,12 +353,12 @@ export function Storefront() {
                         <button
                           className="remove-item"
                           type="button"
-                          onClick={() => removeFromCart(line.product.id)}
+                          onClick={() => removeFromCart(line.product.idProduit)}
                         >
                           Retirer
                         </button>
                         <span className="line-total">
-                          {formatPrice(line.product.price * line.quantity)}
+                          {formatPrice(line.product.prix * line.quantity)}
                         </span>
                       </div>
                     </li>

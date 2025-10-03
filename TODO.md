@@ -1,0 +1,9 @@
+- [x] Import Product type from '../../types/produit'
+- [x] Remove local Product type definition
+- [x] Update featuredProducts array to use idProduit, nomProduit, prix, stock, categorie, dateAjout, image
+- [x] Update all code references: product.id -> product.idProduit, product.name -> product.nomProduit, product.price -> product.prix
+- [x] Update JSX to use new property names
+- [x] Update cart logic to use idProduit
+- [x] Fix imports for type-only
+- [x] Fix cartTotal to use prix
+- [ ] Install @types/qrcode (failed due to unrelated issue)

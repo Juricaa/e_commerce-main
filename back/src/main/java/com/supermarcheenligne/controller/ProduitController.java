@@ -49,7 +49,7 @@ public ResponseEntity<Produit> update(@PathVariable Long id, @RequestBody Produi
     existingProduit.setPrix(produitDetails.getPrix());
     existingProduit.setStock(produitDetails.getStock());
     existingProduit.setCategorie(produitDetails.getCategorie());
-    
+    existingProduit.setImage(produitDetails.getImage());   
  
     Produit updatedProduit = produitService.save(existingProduit);
 

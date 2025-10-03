@@ -20,7 +20,7 @@ public class Produit {
     private Integer stock;
     private String categorie;
     private LocalDate dateAjout;
-
+    private String image;
     @OneToMany(mappedBy = "produit", cascade = CascadeType.ALL)
     private List<CommandeProduit> commandeProduits;
 

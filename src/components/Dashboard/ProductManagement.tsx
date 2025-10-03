@@ -268,14 +268,7 @@ export function ProductManagement() {
                 autoComplete="off"
               />
 
-              <TextField
-                // visible={false} // 'visible' n'est pas une prop valide pour TextField
-                type="date"
-                label="Date d'ajout"
-                value={formData.dateAjout || ''} // Assurez-vous que la valeur est une chaîne vide si non définie
-                onChange={(value) => setFormData({ ...formData, dateAjout: value })}
-                autoComplete="off"
-              />
+            
             </FormLayout>
           </Form>
         </Modal.Section>
