@@ -24,7 +24,7 @@ import {
 import type {NewProductData,
   UpdateProductData} from "../../controllers/produitController"
   
-import type { Product } from "../../types/produit"; // Assurez-vous que le chemin est correct
+import type { Produit } from "../../types/produit"; // Assurez-vous que le chemin est correct
 
 
 // Type pour les données du formulaire (tous les champs sont des chaînes)
@@ -51,10 +51,10 @@ const initialFormData: FormData = {
 
 
 export function ProductManagement() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Produit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Produit | null>(null);
   const [formData, setFormData] = useState<FormData>(initialFormData);
 
   // 1. 🚨 LOGIQUE POUR RÉCUPÉRER LES PRODUITS (READ) 🚨
@@ -78,7 +78,7 @@ export function ProductManagement() {
   };
 
   // Gère l'édition d'un produit existant
-  const handleEditProduct = (product: Product) => {
+  const handleEditProduct = (product: Produit) => {
     setEditingProduct(product);
     setFormData({
       nomProduit: product.nomProduit,

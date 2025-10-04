@@ -1,13 +1,13 @@
 import { API_BASE_URL } from './baseUrl'; // Assurez-vous que ce chemin est correct
 
 // Définition du type Product basé sur votre code front-end
-import type { Product } from '../types/produit'; // Assurez-vous que le chemin est correct
+import type { Produit } from '../types/produit'; // Assurez-vous que le chemin est correct
 
 // Type pour la création d'un produit (pas d'ID, la dateAjout est gérée par le back-end ou le front-end)
-export type NewProductData = Omit<Product, 'idProduit' | 'dateAjout'>;
+export type NewProductData = Omit<Produit, 'idProduit' | 'dateAjout'>;
 
 // Type pour la mise à jour d'un produit (tous les champs sont optionnels)
-export type UpdateProductData = Partial<Product>;
+export type UpdateProductData = Partial<Produit>;
 
 
 
@@ -15,7 +15,7 @@ export type UpdateProductData = Partial<Product>;
  * Récupère la liste complète des produits depuis l'API.
  * @returns Promesse résolue avec la liste des Product, ou une liste vide en cas d'erreur.
  */
-export async function getAllProducts(): Promise<Product[]> {
+export async function getAllProducts(): Promise<Produit[]> {
     const url = `${API_BASE_URL}/produits`;
     try {
         const response = await fetch(url, {
@@ -30,7 +30,7 @@ export async function getAllProducts(): Promise<Product[]> {
             throw new Error(`Erreur API lors de la récupération des produits: ${response.status}`);
         }
 
-        const data: Product[] = await response.json();
+        const data: Produit[] = await response.json();
         return data;
 
     } catch (error) {
@@ -44,7 +44,7 @@ export async function getAllProducts(): Promise<Product[]> {
  * @param productData Les données du nouveau produit.
  * @returns Promesse résolue avec l'objet Product créé, ou null en cas d'échec.
  */
-export async function createProduct(productData: NewProductData): Promise<Product | null> {
+export async function createProduct(productData: NewProductData): Promise<Produit | null> {
     const url = `${API_BASE_URL}/produits`;
     try {
         const payloadWithDate = {
@@ -64,7 +64,7 @@ export async function createProduct(productData: NewProductData): Promise<Produc
             throw new Error(`Erreur API lors de la création du produit: ${response.status} - ${errorBody.message || response.statusText}`);
         }
 
-        const newProduct: Product = await response.json();
+        const newProduct: Produit = await response.json();
         return newProduct;
 
     } catch (error) {
@@ -79,7 +79,7 @@ export async function createProduct(productData: NewProductData): Promise<Produc
  * @param productData Les données partielles du produit à mettre à jour.
  * @returns Promesse résolue avec l'objet Product mis à jour, ou null en cas d'échec.
  */
-export async function updateProduct(idProduit: number, productData: UpdateProductData): Promise<Product | null> {
+export async function updateProduct(idProduit: number, productData: UpdateProductData): Promise<Produit | null> {
     const url = `${API_BASE_URL}/produits/${idProduit}`;
     console.log("Updating product with data:", productData); // Log pour débogage
     try {
@@ -93,7 +93,7 @@ export async function updateProduct(idProduit: number, productData: UpdateProduc
             throw new Error(`Erreur API lors de la mise à jour du produit: ${response.status}`);
         }
 
-        const updatedProduct: Product = await response.json();
+        const updatedProduct: Produit = await response.json();
         return updatedProduct;
 
     } catch (error) {

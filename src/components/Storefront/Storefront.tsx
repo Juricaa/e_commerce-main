@@ -1,12 +1,24 @@
 import type { FormEvent } from "react";
-import { useMemo, useState, useEffect, useCallback } from "react"; // Ajout de useEffect et useCallback
+import { useMemo, useState, useEffect, useCallback } from "react"; 
 import { Link } from "react-router-dom";
 import { toDataURL } from "qrcode";
 import "../../styles/storefront.css";
 import logo from "../../assets/logo.png";
-import type { Product } from "../../types/produit";
-// Importation de la fonction de l'API
+
+// Importation des types
+import type { Produit } from "../../types/produit";
+import type { CommandeCreatePayload, StatutCommande } from "../../types/commande";
+import type { CommandeProduitCreatePayload } from "../../types/commandeProduit";
+import type { PaiementCreatePayload, StatutPaiement } from "../../types/paiement";
+// import type { StatutCommande } from "../../types/statuts";
+
+// Importation des contrôleurs
 import { getAllProducts } from "../../controllers/produitController";
+import { createCommande } from "../../controllers/commandeController"; // Assurez-vous d'importer la fonction de création
+
+// =======================================================
+// TYPES LOCAUX ET CONSTANTES
+// =======================================================
 
 type JournalEntry = {
   id: string;
@@ -16,7 +28,7 @@ type JournalEntry = {
 };
 
 type CartLine = {
-  product: Product;
+  product: Produit;
   quantity: number;
 };
 
@@ -34,15 +46,12 @@ const currencyFormatter = new Intl.NumberFormat("fr-MG", {
   style: "currency",
   currency: "MGA",
 });
-// REMARQUE: La liste statique featuredProducts n'est plus utilisée, elle sera remplacée
-// par l'état `products` mis à jour via l'API.
-/*
-const featuredProducts: Product[] = [
-  // ... (Produits statiques enlevés)
-];
-*/
 
+const formatPrice = (value: number) => currencyFormatter.format(value);
+
+// --- DONNÉES STATIQUES (Journal) ---
 const journalHighlights: JournalEntry[] = [
+  // ... (Journal entries)
   {
     id: "linen-care",
     title: "Linen Care: Keeping Fibers Soft",
@@ -66,23 +75,33 @@ const journalHighlights: JournalEntry[] = [
   },
 ];
 
-const formatPrice = (value: number) => currencyFormatter.format(value);
+// NOTE IMPORTANTE : ID client statique pour la démo. 
+// À remplacer par l'ID de l'utilisateur connecté en production.
+const DEFAULT_CLIENT_ID = 1; 
+
+// =======================================================
+// COMPOSANT STOREFRONT
+// =======================================================
 
 export function Storefront() {
-  // 1. Ajout des états pour les produits et le chargement
-  const [products, setProducts] = useState<Product[]>([]);
+  // --- États des produits et du chargement ---
+  const [products, setProducts] = useState<Produit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // --- États du panier et du formulaire ---
   const [cartItems, setCartItems] = useState<CartLine[]>([]);
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
+  const [customerNumero, setCustomerNumero] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
   const [customerNote, setCustomerNote] = useState("");
+  
+  // --- États du processus de commande ---
   const [feedback, setFeedback] = useState<CheckoutFeedback | null>(null);
   const [orderQr, setOrderQr] = useState<OrderQr | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 2. Définition de la fonction pour récupérer les produits
+  // --- LOGIQUE DE RÉCUPÉRATION DES PRODUITS (existante) ---
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -90,17 +109,17 @@ export function Storefront() {
       setProducts(productList);
     } catch (error) {
       console.error("Erreur lors de la récupération des produits:", error);
-      // Optionnel: Définir un état d'erreur pour l'utilisateur
+      // Gérer l'erreur si besoin
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // 3. Appel de la fonction de récupération au montage du composant
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
-  // --- Le reste du composant reste le même, sauf la section d'affichage des produits ---
+
+  // --- LOGIQUE DU PANIER (existante) ---
   const cartCount = useMemo(
     () => cartItems.reduce((total, line) => total + line.quantity, 0),
     [cartItems],
@@ -111,7 +130,7 @@ export function Storefront() {
     [cartItems],
   );
 
-  const handleAddToCart = (product: Product) => {
+  const handleAddToCart = (product: Produit) => {
     setCartItems((previous) => {
       const existingLine = previous.find((line) => line.product.idProduit === product.idProduit);
       if (existingLine) {
@@ -145,60 +164,198 @@ export function Storefront() {
   const resetCheckoutForm = () => {
     setCustomerName("");
     setCustomerEmail("");
+    setCustomerNumero("");
     setCustomerAddress("");
     setCustomerNote("");
   };
 
-  const handleCheckout = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  // =======================================================
+  // LOGIQUE DE COMMANDE MISE À JOUR (Intégration API)
+  // =======================================================
 
-    if (cartItems.length === 0) {
-      setFeedback({ type: "error", message: "Votre panier est vide." });
-      return;
-    }
+  // const handleCheckout = async (event: FormEvent<HTMLFormElement>) => {
+  //   event.preventDefault();
 
-    setIsSubmitting(true);
+  //   if (cartItems.length === 0) {
+  //     setFeedback({ type: "error", message: "Votre panier est vide." });
+  //     return;
+  //   }
 
-    const reference = `EL-${Date.now().toString(36).toUpperCase()}`;
-    const payload = {
-      reference,
-      customer: {
-        name: customerName.trim(),
-        email: customerEmail.trim(),
-      },
-      address: customerAddress.trim(),
-      note: customerNote.trim(),
-      total: cartTotal,
-      items: cartItems.map((line) => ({
-        id: line.product.idProduit,
-        quantity: line.quantity,
-        price: line.product.prix,
-      })),
-      createdAt: new Date().toISOString(),
+  //   setIsSubmitting(true);
+  //   setFeedback(null);
+  //   setOrderQr(null); // Réinitialiser le QR code précédent
+
+  //   // 1. Préparation des données pour CommandeProduitCreatePayload
+  //   const commandeProduitsPayload: CommandeProduitCreatePayload[] = cartItems.map((line) => ({
+  //     idProduit: line.product.idProduit,
+  //     quantite: line.quantity,
+  //     prixUnitaire: line.product.prix, // Utiliser le prix au moment de l'ajout au panier
+  //     idCommande: 0, // Temporaire, sera remplacé par l'ID réel de la commande par le backend
+  //   }));
+
+  //   // 2. Préparation des données pour PaiementCreatePayload (Simulation d'un paiement à la livraison)
+  //   const paiementPayload: PaiementCreatePayload = {
+  //     montant: cartTotal,
+  //     methodePaiement: "PAIEMENT_LIVRAISON", // Assurez-vous que cette valeur est acceptée par votre ENUM Java
+  //     statutPaiement: "EN_ATTENTE" as StatutPaiement, // Le paiement est en attente de la livraison
+  //     idCommande: 0, // Temporaire, sera remplacé par l'ID réel de la commande par le backend
+  //   };
+    
+  //   // 3. Construction du CommandeCreatePayload final
+  //   const commandePayload: CommandeCreatePayload = {
+  //     idClient: DEFAULT_CLIENT_ID, // Utilisation de l'ID statique pour la démo
+  //     statut: "EN_ATTENTE" as StatutCommande, // Statut initial
+  //     total: cartTotal,
+  //     commandeProduits: commandeProduitsPayload,
+  //     paiements: [paiementPayload], // On envoie le paiement dans une liste
+  //   };
+
+  //   try {
+  //     // 4. Appel de l'API de création de commande
+  //     const nouvelleCommande = await createCommande(commandePayload);
+      
+  //     // 5. Génération du QR code basé sur les données de la commande créée
+  //     const reference = `CDE-${nouvelleCommande.idCommande}`; 
+      
+  //     // Inclusion des données importantes pour le livreur (Nom, Référence, Total)
+  //     const qrData = JSON.stringify({
+  //         ref: reference, 
+  //         idCde: nouvelleCommande.idCommande, 
+  //         nom: customerName.trim(), 
+  //         num: customerNumero.trim(),
+  //         total: cartTotal
+  //     });
+
+  //     const dataUrl = await toDataURL(qrData, {
+  //       errorCorrectionLevel: "M",
+  //       width: 320,
+  //     });
+
+  //     // 6. Succès et mise à jour de l'état
+  //     setOrderQr({ reference, dataUrl });
+  //     setFeedback({
+  //       type: "success",
+  //       message: `Commande #${reference} confirmée ! Présentez ce QR code au livreur lors de la livraison.`,
+  //     });
+  //     setCartItems([]);
+  //     resetCheckoutForm();
+  //   } catch (error) {
+  //     console.error("Erreur lors de la validation de la commande API:", error);
+  //     setFeedback({
+  //       type: "error",
+  //       message: "Échec de la validation de la commande. Veuillez vérifier vos informations et réessayer.",
+  //     });
+  //   } finally {
+  //     setIsSubmitting(false);
+  //   }
+  // };
+
+const handleCheckout = async (event: FormEvent<HTMLFormElement>) => {
+  event.preventDefault();
+
+  if (cartItems.length === 0) {
+    setFeedback({ type: "error", message: "Votre panier est vide." });
+    return;
+  }
+
+  setIsSubmitting(true);
+  setFeedback(null);
+  setOrderQr(null);
+
+  // Générer la date du jour au format AAAA-MM-JJ
+  const today = new Date().toISOString().split("T")[0];
+
+  // 1️⃣ Préparation des produits de la commande
+  const commandeProduitsPayload: CommandeProduitCreatePayload[] = cartItems.map((line) => {
+    const produitPayload = {
+      idProduit: line.product.idProduit,
+      nomProduit: line.product.nomProduit,
+      description: line.product.description,
+      prix: line.product.prix,
+      stock: line.product.stock,
+      // categorie: "string", // valeur placeholder, à remplacer si le backend attend une vraie catégorie
+      dateAjout: today,
+      // commandeProduits: ["string"],
+      inventaires: [
+        {
+          idInventaire: 0,
+          produit: line.product.idProduit,
+          mouvement: "ENTREE",
+          quantite: 0,
+          dateMouvement: today,
+          commentaire: "string",
+        },
+      ],
     };
 
-    try {
-      const dataUrl = await toDataURL(JSON.stringify(payload), {
-        errorCorrectionLevel: "M",
-        width: 320,
-      });
-      setOrderQr({ reference, dataUrl });
-      setFeedback({
-        type: "success",
-        message:
-          "Commande confirmée ! Présentez ce QR code au livreur lors de la livraison.",
-      });
-      setCartItems([]);
-      resetCheckoutForm();
-    } catch (error) {
-      setFeedback({
-        type: "error",
-        message: "Nous n'avons pas pu générer le QR code. Veuillez réessayer.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    return {
+      commande: "string",
+      produit: produitPayload as any,
+      quantite: line.quantity,
+      prixUnitaire: line.product.prix,
+    };
+  });
+
+  // 2️⃣ Préparation du paiement
+  const paiementPayload: PaiementCreatePayload = {
+    // idPaiement: 0,
+    commande: "string",
+    montant: cartTotal,
+    methodePaiement: "PAIEMENT_LIVRAISON",
+    statutPaiement: "EN_ATTENTE",
+    datePaiement: today,
   };
+
+  // 3️⃣ Construction de la commande complète (structure conforme à ton DTO)
+  const commandePayload: CommandeCreatePayload = {
+    idCommande: 0, // valeur par défaut, sera remplacée par le backend
+    client: 1,
+    dateCommande: today,
+    statut: "EN_ATTENTE",
+    total: cartTotal,
+    commandeProduits: commandeProduitsPayload,
+    paiements: [paiementPayload],
+  };
+
+  try {
+    // 4️⃣ Appel API pour créer la commande
+    const nouvelleCommande = await createCommande(commandePayload);
+
+    // 5️⃣ Génération du QR code après création
+    const reference = `CDE-${nouvelleCommande.idCommande}`;
+    const qrData = JSON.stringify({
+      ref: reference,
+      idCde: nouvelleCommande.idCommande,
+      nom: customerName.trim(),
+      num: customerNumero.trim(),
+      total: cartTotal,
+    });
+
+    const dataUrl = await toDataURL(qrData, {
+      errorCorrectionLevel: "M",
+      width: 320,
+    });
+
+    // 6️⃣ Mise à jour des états après succès
+    setOrderQr({ reference, dataUrl });
+    setFeedback({
+      type: "success",
+      message: `Commande #${reference} confirmée ! Présentez ce QR code au livreur lors de la livraison.`,
+    });
+    setCartItems([]);
+    resetCheckoutForm();
+
+  } catch (error) {
+    console.error("Erreur lors de la validation de la commande API:", error);
+    setFeedback({
+      type: "error",
+      message: "Échec de la validation de la commande. Veuillez vérifier vos informations et réessayer.",
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   return (
     <div className="storefront-page">
@@ -232,7 +389,7 @@ export function Storefront() {
       </header>
 
       <main>
-        <section className="storefront-hero" id="home">
+      <section className="storefront-hero" id="home">
           <div className="hero-content">
             <p className="hero-eyebrow">Nouvelle collection</p>
             <h1 className="hero-title">Elevated essentials for brighter days.</h1>
@@ -264,10 +421,9 @@ export function Storefront() {
               src="https://media.istockphoto.com/id/1253950596/fr/vectoriel/illustration-de-boutique-en-ligne-e-commerce-dans-le-design-plat.jpg?s=170667a&w=0&k=20&c=VI2xB9iSnwB0T9F8Qi2PeOBfrlsrKxamuZ0GClO6Dw0="
               alt="Model wearing a linen shirt"
             />
-        </section>
-
+        </section>      
         <section className="product-showcase" id="collections">
-          <div className="section-header">
+        <div className="section-header">
             <div>
               <p className="section-eyebrow">Pièces phares</p>
               <h2 className="section-title">Sélection de nos stylistes</h2>
@@ -276,40 +432,39 @@ export function Storefront() {
               Six silhouettes choisies pour leur savoir-faire, leur polyvalence et leur design durable.
             </p>
           </div>
-          {/* 4. Affichage conditionnel basé sur l'état de chargement */}
-          {isLoading ? (
-            <div className="loading-message">Chargement des produits...</div>
-          ) : (
-            <div className="product-grid">
-              {products.map((product) => (
-                <article key={product.idProduit} className="product-card">
-                  <div className="product-image-wrapper">
-                    <img src={product.image} alt={product.nomProduit} />
+        {isLoading ? (
+          <div className="loading-message">Chargement des produits...</div>
+        ) : (
+          <div className="product-grid">
+            {products.map((product) => (
+              <article key={product.idProduit} className="product-card">
+                <div className="product-image-wrapper">
+                  <img src={product.image} alt={product.nomProduit} />
+                </div>
+                <div className="product-details">
+                  <h3 className="product-name">{product.nomProduit}</h3>
+                  <p className="product-description">{product.description}</p>
+                  <div className="product-footer">
+                    <span className="product-price">{formatPrice(product.prix)}</span>
+                    <button
+                      className="product-action"
+                      type="button"
+                      onClick={() => handleAddToCart(product)}
+                      disabled={product.stock <= 0}
+                    >
+                      {product.stock > 0 ? "Ajouter au panier" : "Indisponible"}
+                    </button>
                   </div>
-                  <div className="product-details">
-                    <h3 className="product-name">{product.nomProduit}</h3>
-                    <p className="product-description">{product.description}</p>
-                    <div className="product-footer">
-                      <span className="product-price">{formatPrice(product.prix)}</span> 
-                      <button
-                        className="product-action"
-                        type="button"
-                        onClick={() => handleAddToCart(product)}
-                        // Désactivation si le produit est en rupture de stock (facultatif)
-                        disabled={product.stock <= 0} 
-                      >
-                        {product.stock > 0 ? "Ajouter au panier" : "Indisponible"}
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
-        <section className="checkout-section" id="checkout">
-          <div className="section-header">
+      {/* Section de Checkout */}
+      <section className="checkout-section" id="checkout">
+      <div className="section-header">
             <div>
               <p className="section-eyebrow">Commande</p>
               <h2 className="section-title">Finalisez votre achat</h2>
@@ -371,59 +526,70 @@ export function Storefront() {
               </div>
             </div>
 
-            <form className="checkout-form" onSubmit={handleCheckout}>
-              <h3>Informations client</h3>
-              <label className="checkout-label">
-                Nom complet
-                <input
-                  className="checkout-input"
-                  type="text"
-                  value={customerName}
-                  onChange={(event) => setCustomerName(event.target.value)}
-                  placeholder="Marie Dupont"
-                  required
-                />
-              </label>
-              <label className="checkout-label">
-                Email
-                <input
-                  className="checkout-input"
-                  type="email"
-                  value={customerEmail}
-                  onChange={(event) => setCustomerEmail(event.target.value)}
-                  placeholder="marie.dupont@email.com"
-                  required
-                />
-              </label>
-              <label className="checkout-label">
-                Adresse de livraison
-                <textarea
-                  className="checkout-textarea"
-                  value={customerAddress}
-                  onChange={(event) => setCustomerAddress(event.target.value)}
-                  placeholder="12 rue Paradis, Marseille"
-                  rows={3}
-                  required
-                />
-              </label>
-              <label className="checkout-label">
-                Instructions (optionnel)
-                <textarea
-                  className="checkout-textarea"
-                  value={customerNote}
-                  onChange={(event) => setCustomerNote(event.target.value)}
-                  placeholder="Code porte, étage, préférences de livraison…"
-                  rows={2}
-                />
-              </label>
-              <button className="checkout-submit" type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Génération du QR code…" : "Confirmer la commande"}
-              </button>
-              {feedback ? (
-                <p className={feedback.type === "success" ? "checkout-feedback success" : "checkout-feedback error"}>
-                  {feedback.message}
-                </p>
-              ) : null}
+          <form className="checkout-form" onSubmit={handleCheckout}>
+            {/* ... (Formulaire client) ... */}
+            <label className="checkout-label">
+              Nom complet
+              <input
+                className="checkout-input"
+                type="text"
+                value={customerName}
+                onChange={(event) => setCustomerName(event.target.value)}
+                placeholder="Marie Dupont"
+                required
+              />
+            </label>
+            <label className="checkout-label">
+              Numéro Mobile
+              <input
+                className="checkout-input"
+                type="text"
+                value={customerNumero}
+                onChange={(event) => setCustomerNumero(event.target.value)}
+                placeholder="+261 xx xxx xx"
+                required
+              />
+            </label>
+            <label className="checkout-label">
+              Email
+              <input
+                className="checkout-input"
+                type="email"
+                value={customerEmail}
+                onChange={(event) => setCustomerEmail(event.target.value)}
+                placeholder="marie.dupont@email.com"
+                required
+              />
+            </label>
+            <label className="checkout-label">
+              Adresse de livraison
+              <textarea
+                className="checkout-textarea"
+                value={customerAddress}
+                onChange={(event) => setCustomerAddress(event.target.value)}
+                placeholder="12 rue Paradis, Antananarivo"
+                rows={3}
+                required
+              />
+            </label>
+            <label className="checkout-label">
+              Instructions (optionnel)
+              <textarea
+                className="checkout-textarea"
+                value={customerNote}
+                onChange={(event) => setCustomerNote(event.target.value)}
+                placeholder="Code porte, étage, préférences de livraison…"
+                rows={2}
+              />
+            </label>
+            <button className="checkout-submit" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Validation de la commande..." : "Confirmer la commande"}
+            </button>
+            {feedback ? (
+              <p className={feedback.type === "success" ? "checkout-feedback success" : "checkout-feedback error"}>
+                {feedback.message}
+              </p>
+            ) : null}
             </form>
 
             <div className="qr-panel">
