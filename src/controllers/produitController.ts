@@ -1,5 +1,6 @@
 import { API_BASE_URL } from './baseUrl';
 import type { Produit } from '../types/produit';
+import { createInventoryEntryForNewProduct, createInventoryEntryForStockUpdate } from './invetaireController';
 
 const PRODUIT_API_URL = `${API_BASE_URL}/produits/`;
 
@@ -198,4 +199,126 @@ export async function searchProductsByName(nom_produit: string): Promise<{ succe
  */
 export async function searchProducts(categorie?: string, nom_produit?: string): Promise<{ success: boolean; data: Produit[] }> {
   return getAllProducts({ categorie, nom_produit });
+}
+
+export async function createProductWithInventory(productData: NewProductData): Promise<{ success: boolean; data: Produit }> {
+  console.log("Création de produit avec inventaire :", productData);
+  
+  try {
+    // 1. Créer le produit
+    const result = await createProduct(productData);
+    
+    // 2. Créer le mouvement d'inventaire pour le stock initial
+    if (result.success && productData.stock > 0) {
+      await createInventoryEntryForNewProduct(
+        result.data.id_produit,
+        productData.stock,
+        productData.nom_produit
+      );
+    }
+    
+    return result;
+    
+  } catch (error) {
+    console.error("Erreur lors de la création du produit avec inventaire:", error);
+    throw error;
+  }
+}
+
+/**
+ * Met à jour un produit avec gestion d'inventaire pour les changements de stock
+ */
+export async function updateProductWithInventory(
+  idProduit: string, 
+  productData: UpdateProductData,
+  ancienProduit?: Produit
+): Promise<{ success: boolean; data: Produit }> {
+  console.log("Mise à jour de produit avec inventaire:", { idProduit, productData, ancienProduit });
+  
+  try {
+    // Si on a l'ancien produit et qu'on modifie le stock
+    if (ancienProduit && productData.stock !== undefined && productData.stock !== ancienProduit.stock) {
+      const difference = productData.stock - ancienProduit.stock;
+      
+      if (difference > 0) {
+        // Stock augmenté = entrée en inventaire
+        await createInventoryEntryForStockUpdate(
+          idProduit,
+          difference,
+          ancienProduit.stock,
+          productData.stock,
+          'Réapprovisionnement stock'
+        );
+      }
+      // Note: Si différence < 0 (stock diminué), on ne crée pas de mouvement SORTIE
+      // car les sorties sont gérées par les commandes
+    }
+    
+    // Mettre à jour le produit
+    return await updateProduct(idProduit, productData);
+    
+  } catch (error) {
+    console.error(`Erreur lors de la mise à jour du produit ${idProduit} avec inventaire:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Fonction utilitaire pour récupérer un produit avant mise à jour
+ */
+export async function getProductAndUpdateWithInventory(
+  idProduit: string, 
+  productData: UpdateProductData
+): Promise<{ success: boolean; data: Produit }> {
+  
+  try {
+    // Récupérer l'ancien produit
+    const ancienProduitResult = await getProductById(idProduit);
+    
+    // Mettre à jour avec gestion d'inventaire
+    return await updateProductWithInventory(
+      idProduit, 
+      productData, 
+      ancienProduitResult.data
+    );
+    
+  } catch (error) {
+    console.error(`Erreur lors de la mise à jour avec inventaire pour ${idProduit}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Réapprovisionne un produit avec mouvement d'inventaire
+ */
+export async function restockProduct(
+  idProduit: string, 
+  quantiteAjoutee: number,
+  motif: string = 'Réapprovisionnement manuel'
+): Promise<{ success: boolean; data: Produit }> {
+  
+  try {
+    // 1. Récupérer le produit actuel
+    const produitActuel = await getProductById(idProduit);
+    const ancienStock = produitActuel.data.stock;
+    const nouveauStock = ancienStock + quantiteAjoutee;
+    
+    // 2. Créer le mouvement d'inventaire
+    await createInventoryEntryForStockUpdate(
+      idProduit,
+      quantiteAjoutee,
+      ancienStock,
+      nouveauStock,
+      motif
+    );
+    
+    // 3. Mettre à jour le stock du produit
+    return await updateProduct(idProduit, {
+      stock: nouveauStock
+    });
+    
+  } catch (error) {
+    console.error(`Erreur lors du réapprovisionnement du produit ${idProduit}:`, error);
+    throw error;
+  }
 }

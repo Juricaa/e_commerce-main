@@ -1,5 +1,5 @@
 import { API_BASE_URL } from './baseUrl';
-import type { Inventory } from '../types/inventaire';
+import type { Inventory, InventoryCreatePayload } from '../types/inventaire';
 
 const INVENTAIRE_API_URL = `${API_BASE_URL}/inventaires/`;
 
@@ -202,4 +202,44 @@ export async function getInventoryExits(): Promise<{ success: boolean; data: Inv
  */
 export async function getInventoryByDateRange(date_debut: string, date_fin: string): Promise<{ success: boolean; data: Inventory[] }> {
   return getAllInventories({ date_debut, date_fin });
+}
+
+
+export async function createInventoryEntryForNewProduct(
+  id_produit: string, 
+  quantite: number, 
+  nom_produit: string
+): Promise<{ success: boolean; data: any }> {
+  
+  const inventoryPayload: InventoryCreatePayload = {
+    mouvement: 'ENTREE',
+    quantite: quantite,
+    id_produit: id_produit,
+    commentaire: `Stock initial - ${nom_produit}`,
+    date_mouvement: ''
+  };
+
+  return await createInventory(inventoryPayload);
+}
+
+/**
+ * Crée un mouvement d'entrée en inventaire pour un réapprovisionnement
+ */
+export async function createInventoryEntryForStockUpdate(
+  id_produit: string, 
+  quantite_ajoutee: number, 
+  ancien_stock: number,
+  nouveau_stock: number,
+  motif: string = 'Réapprovisionnement'
+): Promise<{ success: boolean; data: any }> {
+  
+  const inventoryPayload: InventoryCreatePayload = {
+    mouvement: 'ENTREE',
+    quantite: quantite_ajoutee,
+    id_produit: id_produit,
+    commentaire: `${motif} - Stock: ${ancien_stock} → ${nouveau_stock} (+${quantite_ajoutee})`,
+    date_mouvement: ''
+  };
+
+  return await createInventory(inventoryPayload);
 }
