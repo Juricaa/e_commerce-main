@@ -245,13 +245,14 @@ export function Dashboard() {
                         </div>
                         <div className="member-progress">
                           <ProgressBar
-                            progress={commande.statut === 'payée' ? 100 : commande.statut === 'expédiée' ? 75 : commande.statut === 'en attente' ? 25 : 0}
+                            progress={commande.statut === 'livrée' ? 100 : commande.statut === 'expédiée' ? 75 : commande.statut === 'en attente' ? 25 : 0}
                             size="small"
                           />
                           <Text as="span">
                             {commande.statut === 'en attente' ? 'En attente' : 
                              commande.statut === 'payée' ? 'Payée' : 
-                             commande.statut === 'expédiée' ? 'Expédiée' : 'Annulée'}
+                             commande.statut === 'expédiée' ? 'Expédiée' : 
+                             commande.statut === 'livrée' ? 'Livrée':'Annulée'}
                           </Text>
                         </div>
                       </div>

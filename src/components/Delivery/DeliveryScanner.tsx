@@ -16,8 +16,8 @@ import {
     CheckIcon,
 } from "@shopify/polaris-icons";
 import "../../styles/delivery.css";
-import { updatePaiement } from "../../controllers/paiementController";
-import { updateCommande } from "../../controllers/commandeController";
+import { getPaiementById, updatePaiement } from "../../controllers/paiementController";
+import { getCommandeById, updateCommande } from "../../controllers/commandeController";
 
 // Types pour les données QR Code
 type ProduitQr = {
@@ -55,33 +55,46 @@ export function DeliveryScanner() {
   const [statutLivraison, setStatutLivraison] = useState<string>("livrée");
 
   // 🔹 Fonction appelée quand un QR code est lu
-  const handleScan = (data: string | null) => {
+  const handleScan = async (data: string | null) => {
     if (data) {
       try {
         const qrData: QrData = JSON.parse(data);
-        
+  
+        // 🔹 Récupérer le statut actuel depuis la base de données
+        const [commandeRes, paiementRes] = await Promise.all([
+          getCommandeById(Number(qrData.id_commande)),
+          getPaiementById(Number(qrData.id_paiement)),
+        ]);
+  
         const newRecord: ScanRecord = {
           qrData,
           scannedAt: new Date().toLocaleString("fr-FR"),
-          statutPaiement: "en attente",
-          statutLivraison: "en préparation",
+          statutLivraison: commandeRes.data.statut as ScanRecord["statutLivraison"],
+          statutPaiement: paiementRes.data.statut_paiement as ScanRecord["statutPaiement"],
         };
-
-        setScanHistory((prev) => [newRecord, ...prev.slice(0, 9)]); // Garder seulement les 10 derniers
+  
+        // 🔹 Mettre à jour l'historique (éviter doublons)
+        setScanHistory(prev => {
+          // Supprimer l'ancien scan du même QR si existant
+          const filtered = prev.filter(r => r.qrData.id_commande !== qrData.id_commande);
+          return [newRecord, ...filtered.slice(0, 9)]; // garder max 10
+        });
+  
         setScanError("");
-        
-        // Ouvrir automatiquement le modal pour le nouveau scan
+  
+        // Ouvrir le modal automatiquement
         setSelectedRecord(newRecord);
-        setStatutPaiement("payée");
-        setStatutLivraison("livrée");
+        setStatutLivraison(newRecord.statutLivraison);
+        setStatutPaiement(newRecord.statutPaiement);
         setModalOpen(true);
-
+  
       } catch (error) {
-        setScanError("QR code invalide - format JSON incorrect");
-        console.error("Erreur parsing QR:", error);
+        console.error("Erreur parsing QR ou récupération statuts :", error);
+        setScanError("QR code invalide ou impossible de récupérer les statuts");
       }
     }
   };
+  
 
   // 🔹 Gestion des erreurs du scanner
   const handleError = (err: any) => {
