@@ -284,14 +284,14 @@ export function UserManagement() {
                 value={formData.nom}
                 onChange={(value) => setFormData({ ...formData, nom: value })}
                 autoComplete="off"
-                required
+        
               />
               <TextField
                 label="Prénom"
                 value={formData.prenom}
                 onChange={(value) => setFormData({ ...formData, prenom: value })}
                 autoComplete="off"
-                required
+           
               />
               <Select
                 label="Rôle"
@@ -305,7 +305,7 @@ export function UserManagement() {
                 value={formData.email}
                 onChange={(value) => setFormData({ ...formData, email: value })}
                 autoComplete="off"
-                required
+       
               />
               <TextField
                 label="Mot de passe"

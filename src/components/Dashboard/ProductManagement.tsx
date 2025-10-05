@@ -21,6 +21,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  updateProductWithInventory,
 } from "../../controllers/produitController";
 
 // Configuration des options de catégorie
@@ -143,7 +144,7 @@ export function ProductManagement() {
 
       if (editingProduct) {
         // MODE MISE À JOUR
-        const result = await updateProduct(editingProduct.id_produit, payload);
+        const result = await updateProductWithInventory(editingProduct.id_produit, payload, );
         if (result.success) {
           await fetchProducts();
           setIsModalOpen(false);
@@ -264,7 +265,7 @@ export function ProductManagement() {
                 value={formData.nom_produit}
                 onChange={(value) => setFormData({ ...formData, nom_produit: value })}
                 autoComplete="off"
-                required
+            
               />
               <TextField
                 label="Description"
@@ -272,30 +273,31 @@ export function ProductManagement() {
                 onChange={(value) => setFormData({ ...formData, description: value })}
                 multiline={3}
                 autoComplete="off"
-                required
+              
               />
               <TextField
                 label="Prix (Ar)"
-                type="number"
+                type="text"
                 value={formData.prix}
                 onChange={(value) => setFormData({ ...formData, prix: value })}
                 prefix="Ar"
                 autoComplete="off"
-                required
+          
               />
               <TextField
                 label="Stock"
-                type="number"
+                type="text"
                 value={formData.stock}
                 onChange={(value) => setFormData({ ...formData, stock: value })}
                 autoComplete="off"
-                required
+            
               />
-              <Select
+              <TextField
                 label="Catégorie"
-                options={categoryOptions}
+                type="text"
                 value={formData.categorie}
                 onChange={(value) => setFormData({ ...formData, categorie: value })}
+                autoComplete=""
               />
               <TextField
                 label="URL de l'image"

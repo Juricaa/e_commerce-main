@@ -50,7 +50,7 @@ export async function getAllCommandes(filters?: {
  * Récupère une commande par son ID.
  */
 export async function getCommandeById(id: number): Promise<{ success: boolean; data: Commande }> {
-  const response = await fetch(`${COMMANDE_API_URL}/${id}/`);
+  const response = await fetch(`${COMMANDE_API_URL}${id}/`);
   if (!response.ok) {
     throw new Error(`Échec de la récupération de la commande ${id} : ${response.statusText}`);
   }
@@ -92,7 +92,7 @@ export async function createCommande(commandeData: CreateCommandeData): Promise<
  * Met à jour une commande existante.
  */
 export async function updateCommande(id: number, updateData: Partial<Commande>): Promise<{ success: boolean; data: Commande }> {
-  const response = await fetch(`${COMMANDE_API_URL}/${id}/`, {
+  const response = await fetch(`${COMMANDE_API_URL}${id}/`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updateData),
@@ -115,7 +115,7 @@ export async function updateCommande(id: number, updateData: Partial<Commande>):
  * Supprime une commande par son ID.
  */
 export async function deleteCommande(id: number): Promise<void> {
-  const response = await fetch(`${COMMANDE_API_URL}/${id}/`, {
+  const response = await fetch(`${COMMANDE_API_URL}${id}/`, {
     method: 'DELETE',
   });
 
@@ -132,7 +132,7 @@ export async function getOrCreateClient(clientData: ClientData): Promise<{
   id_client: string; 
   message: string;
 }> {
-  const response = await fetch(`${COMMANDE_API_URL}/client/`, {
+  const response = await fetch(`${COMMANDE_API_URL}client/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(clientData),

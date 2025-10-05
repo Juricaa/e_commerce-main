@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Layout,
   Card,
@@ -12,171 +12,219 @@ import {
   Select,
   Badge,
 } from "@shopify/polaris";
-import { PlusIcon, EditIcon, DeleteIcon } from "@shopify/polaris-icons";
-
-type Order = {
-  id_commande: number;
-  idClient: number;
-  client_nom: string;
-  produits: Array<{ id_produit: number; nom: string; quantite: number; prix: number }>;
-  total: number;
-  statut: 'En attente' | 'Confirmée' | 'En préparation' | 'Expédiée' | 'Livrée' | 'Annulée';
-  adresse_livraison: string;
-  date_commande: string;
-};
-
-const initialOrders: Order[] = [
-  {
-    id_commande: 1,
-    idClient: 1,
-    client_nom: "John Doe",
-    produits: [
-      { id_produit: 1, nom: "Produit 1", quantite: 2, prix: 10.99 },
-      { id_produit: 2, nom: "Produit 2", quantite: 1, prix: 25.50 },
-    ],
-    total: 47.48,
-    statut: "En attente",
-    adresse_livraison: "123 Main St, City, Country",
-    date_commande: new Date().toISOString(),
-  },
-  {
-    id_commande: 2,
-    idClient: 2,
-    client_nom: "Jane Smith",
-    produits: [
-      { id_produit: 1, nom: "Produit 1", quantite: 1, prix: 10.99 },
-    ],
-    total: 10.99,
-    statut: "Livrée",
-    adresse_livraison: "456 Elm St, City, Country",
-    date_commande: new Date().toISOString(),
-  },
-];
+import { PlusIcon, EditIcon, DeleteIcon, CheckIcon } from "@shopify/polaris-icons";
+import type { Commande, StatutCommande } from '../../types/commande';
+import { 
+  getAllCommandes, 
+  createCommande, 
+  updateCommande, 
+  deleteCommande,
+  getOrCreateClient,
+  type CreateCommandeData,
+  type ClientData 
+} from '../../controllers/commandeController';
 
 const statusOptions = [
-  { label: 'En attente', value: 'En attente' },
-  { label: 'Confirmée', value: 'Confirmée' },
-  { label: 'En préparation', value: 'En préparation' },
-  { label: 'Expédiée', value: 'Expédiée' },
-  { label: 'Livrée', value: 'Livrée' },
-  { label: 'Annulée', value: 'Annulée' },
+  { label: 'En attente', value: 'en attente' },
+  { label: 'Payée', value: 'payée' },
+  { label: 'Expédiée', value: 'expédiée' },
+  { label: 'Annulée', value: 'annulée' },
 ];
 
 export function OrderManagement() {
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [commandes, setCommandes] = useState<Commande[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  const [editingCommande, setEditingCommande] = useState<Commande | null>(null);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    idClient: "",
-    client_nom: "",
-    produits: "",
+    nom: "",
+    prenom: "",
+    email: "",
+    telephone: "",
+    adresse: "",
     total: "",
-    statut: "En attente" as Order['statut'],
-    adresse_livraison: "",
+    statut: "en attente" as StatutCommande,
   });
 
-  const handleAddOrder = () => {
-    setEditingOrder(null);
-    setFormData({
-      idClient: "",
-      client_nom: "",
-      produits: "",
-      total: "",
-      statut: "En attente",
-      adresse_livraison: "",
-    });
-    setIsModalOpen(true);
-  };
+  // Charger les commandes au montage du composant
+  useEffect(() => {
+    loadCommandes();
+  }, []);
 
-  const handleEditOrder = (order: Order) => {
-    setEditingOrder(order);
-    setFormData({
-      idClient: order.idClient.toString(),
-      client_nom: order.client_nom,
-      produits: JSON.stringify(order.produits),
-      total: order.total.toString(),
-      statut: order.statut,
-      adresse_livraison: order.adresse_livraison,
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleDeleteOrder = (id: number) => {
-    setOrders(orders.filter((o) => o.id_commande !== id));
-  };
-
-  const handleSaveOrder = () => {
-    if (!formData.idClient || !formData.client_nom || !formData.total) return;
-
-    let produits: Order['produits'] = [];
+  const loadCommandes = async () => {
     try {
-      produits = JSON.parse(formData.produits);
-    } catch {
-      // Invalid JSON, keep empty
+      setLoading(true);
+      const result = await getAllCommandes();
+      if (result.success) {
+        setCommandes(result.data);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des commandes:', error);
+    } finally {
+      setLoading(false);
     }
-
-    const newOrder: Order = {
-      id_commande: editingOrder ? editingOrder.id_commande : Math.max(...orders.map(o => o.id_commande)) + 1,
-      idClient: parseInt(formData.idClient),
-      client_nom: formData.client_nom,
-      produits,
-      total: parseFloat(formData.total),
-      statut: formData.statut,
-      adresse_livraison: formData.adresse_livraison,
-      date_commande: editingOrder ? editingOrder.date_commande : new Date().toISOString(),
-    };
-
-    if (editingOrder) {
-      setOrders(orders.map(o => o.id_commande === editingOrder.id_commande ? newOrder : o));
-    } else {
-      setOrders([...orders, newOrder]);
-    }
-    setIsModalOpen(false);
   };
 
-  const getStatusColor = (status: string) => {
+  const handleAddCommande = () => {
+    setEditingCommande(null);
+    setFormData({
+      nom: "",
+      prenom: "",
+      email: "",
+      telephone: "",
+      adresse: "",
+      total: "",
+      statut: "en attente",
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleEditCommande = (commande: Commande) => {
+    setEditingCommande(commande);
+    setFormData({
+      nom: commande.client?.nom || "",
+      prenom: commande.client?.prenom || "",
+      email: commande.client?.email || "",
+      telephone: "",
+      adresse: "",
+      total: commande.total.toString(),
+      statut: commande.statut,
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteCommande = async (id: string) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette commande ? Cette action est irréversible.")) {
+      return;
+    }
+    try {
+      await deleteCommande(parseInt(id));
+      setCommandes(commandes.filter(c => c.id_commande !== id));
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+    }
+  };
+
+  const handleMarkAsShipped = async (id: string) => {
+    try {
+      const result = await updateCommande(parseInt(id), { statut: 'expédiée' });
+      if (result.success) {
+        setCommandes(commandes.map(c =>
+          c.id_commande === id ? { ...c, statut: 'expédiée' } : c
+        ));
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error);
+    }
+  };
+
+  const handleSaveCommande = async () => {
+    if (!formData.nom || !formData.prenom || !formData.email || !formData.total) {
+      console.error('Champs obligatoires manquants');
+      return;
+    }
+
+    try {
+      if (editingCommande) {
+        // Mise à jour d'une commande existante
+        const updateData = {
+          total: parseFloat(formData.total),
+          statut: formData.statut,
+        };
+        const result = await updateCommande(parseInt(editingCommande.id_commande), updateData);
+        if (result.success) {
+          setCommandes(commandes.map(c => 
+            c.id_commande === editingCommande.id_commande ? result.data : c
+          ));
+        }
+      } else {
+        // Création d'une nouvelle commande
+        const clientData: ClientData = {
+          nom: formData.nom,
+          prenom: formData.prenom,
+          email: formData.email,
+          telephone: formData.telephone,
+          adresse: formData.adresse,
+        };
+
+        const commandeData: CreateCommandeData = {
+          client: clientData,
+          total: parseFloat(formData.total),
+          statut: formData.statut,
+        };
+
+        const result = await createCommande(commandeData);
+        if (result.success) {
+          setCommandes([...commandes, result.data]);
+        }
+      }
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+    }
+  };
+
+  const getStatusColor = (status: StatutCommande) => {
     switch (status) {
-      case "Livrée":
+      case "payée":
         return "success";
-      case "En attente":
-      case "Confirmée":
-      case "En préparation":
+      case "en attente":
         return "warning";
-      case "Expédiée":
+      case "expédiée":
         return "info";
-      case "Annulée":
+      case "annulée":
         return "critical";
       default:
         return "new";
     }
   };
 
-  const rows = orders.map((order) => [
-    `#${order.id_commande}`,
-    order.client_nom,
-    order.produits.map(p => `${p.nom} (${p.quantite})`).join(", "),
-    `${order.total}€`,
-    <Badge key={order.id_commande} tone={getStatusColor(order.statut)}>
-      {order.statut}
+  const getStatusLabel = (status: StatutCommande) => {
+    switch (status) {
+      case "en attente": return "En attente";
+      case "payée": return "Payée";
+      case "expédiée": return "Expédiée";
+      case "annulée": return "Annulée";
+      default: return status;
+    }
+  };
+
+  const rows = commandes.map((commande) => [
+    `#${commande.id_commande}`,
+    commande.client ? `${commande.client.prenom} ${commande.client.nom}` : `Client ${commande.id_client}`,
+    commande.client?.email || "N/A",
+    `${commande.total}Ar`,
+    <Badge key={commande.id_commande} tone={getStatusColor(commande.statut)}>
+      {getStatusLabel(commande.statut)}
     </Badge>,
-    order.adresse_livraison,
-    new Date(order.date_commande).toLocaleDateString(),
-    <div style={{ display: "flex", gap: "8px" }}>
-      <Button
+    new Date(commande.date_commande).toLocaleDateString(),
+    <div key={commande.id_commande} style={{ display: "flex", gap: "8px" }}>
+       {commande.statut !== 'expédiée' && (<Button
         size="slim"
         icon={EditIcon}
-        onClick={() => handleEditOrder(order)}
+        onClick={() => handleEditCommande(commande)}
       >
         Modifier
-      </Button>
-      <Button
+      </Button>)}
+      {commande.statut !== 'expédiée' && (
+        <Button
+          size="slim"
+          icon={CheckIcon}
+          onClick={() => handleMarkAsShipped(commande.id_commande)}
+        >
+          Expédier
+        </Button>
+
+        
+      )}
+      {commande.statut !== 'expédiée' &&( <Button
         size="slim"
         tone="critical"
         icon={DeleteIcon}
-        onClick={() => handleDeleteOrder(order.id_commande)}
+        onClick={() => handleDeleteCommande(commande.id_commande)}
       >
         Supprimer
-      </Button>
+      </Button>)}
     </div>,
   ]);
 
@@ -187,26 +235,32 @@ export function OrderManagement() {
           <Text variant="headingLg" as="h1">
             Gestion des Commandes
           </Text>
-          <Button variant="primary" icon={PlusIcon} onClick={handleAddOrder}>
+          <Button variant="primary" icon={PlusIcon} onClick={handleAddCommande}>
             Ajouter une Commande
           </Button>
         </div>
         <Card>
-          <DataTable
-            columnContentTypes={["text", "text", "text", "numeric", "text", "text", "text", "text"]}
-            headings={["ID Commande", "Client", "Produits", "Total", "Statut", "Adresse Livraison", "Date", "Actions"]}
-            rows={rows}
-          />
+          {loading ? (
+            <div style={{ padding: "20px", textAlign: "center" }}>
+              <Text as="p">Chargement des commandes...</Text>
+            </div>
+          ) : (
+            <DataTable
+              columnContentTypes={["text", "text", "text", "numeric", "text", "text", "text"]}
+              headings={["ID Commande", "Client", "Email", "Total", "Statut", "Date", "Actions"]}
+              rows={rows}
+            />
+          )}
         </Card>
       </Layout.Section>
 
       <Modal
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingOrder ? "Modifier la Commande" : "Ajouter une Commande"}
+        title={editingCommande ? "Modifier la Commande" : "Ajouter une Commande"}
         primaryAction={{
           content: "Enregistrer",
-          onAction: handleSaveOrder,
+          onAction: handleSaveCommande,
         }}
         secondaryActions={[
           {
@@ -216,49 +270,60 @@ export function OrderManagement() {
         ]}
       >
         <Modal.Section>
-          <Form onSubmit={handleSaveOrder}>
+          <Form onSubmit={handleSaveCommande}>
             <FormLayout>
               <TextField
-                label="ID Client"
-                type="number"
-                value={formData.idClient}
-                onChange={(value) => setFormData({ ...formData, idClient: value })}
+                label="Nom"
+                value={formData.nom}
+                onChange={(value) => setFormData({ ...formData, nom: value })}
                 autoComplete="off"
+                disabled={!!editingCommande}
               />
               <TextField
-                label="Nom Client"
-                value={formData.client_nom}
-                onChange={(value) => setFormData({ ...formData, client_nom: value })}
+                label="Prénom"
+                value={formData.prenom}
+                onChange={(value) => setFormData({ ...formData, prenom: value })}
                 autoComplete="off"
+                disabled={!!editingCommande}
               />
               <TextField
-                label="Produits (JSON)"
-                value={formData.produits}
-                onChange={(value) => setFormData({ ...formData, produits: value })}
-                multiline
+                label="Email"
+                type="email"
+                value={formData.email}
+                onChange={(value) => setFormData({ ...formData, email: value })}
                 autoComplete="off"
-                helpText="Format: [{id_produit: 1, nom: 'Produit 1', quantite: 2, prix: 10.99}]"
+                disabled={!!editingCommande}
               />
+              {!editingCommande && (
+                <>
+                  <TextField
+                    label="Téléphone"
+                    value={formData.telephone}
+                    onChange={(value) => setFormData({ ...formData, telephone: value })}
+                    autoComplete="off"
+                  />
+                  <TextField
+                    label="Adresse"
+                    value={formData.adresse}
+                    onChange={(value) => setFormData({ ...formData, adresse: value })}
+                    multiline
+                    autoComplete="off"
+                  />
+                </>
+              )}
               <TextField
                 label="Total"
                 type="number"
                 value={formData.total}
                 onChange={(value) => setFormData({ ...formData, total: value })}
                 autoComplete="off"
-                suffix="€"
+                suffix="Ar"
               />
               <Select
                 label="Statut"
                 options={statusOptions}
                 value={formData.statut}
-                onChange={(value) => setFormData({ ...formData, statut: value as Order['statut'] })}
-              />
-              <TextField
-                label="Adresse de Livraison"
-                value={formData.adresse_livraison}
-                onChange={(value) => setFormData({ ...formData, adresse_livraison: value })}
-                multiline
-                autoComplete="off"
+                onChange={(value) => setFormData({ ...formData, statut: value as StatutCommande })}
               />
             </FormLayout>
           </Form>

@@ -25,7 +25,7 @@ export async function getAllPaiements(): Promise<{ success: boolean; data: Paiem
  * Récupère un paiement par son ID.
  */
 export async function getPaiementById(id: number): Promise<{ success: boolean; data: Paiement }> {
-  const response = await fetch(`${PAIEMENT_API_URL}/${id}/`);
+  const response = await fetch(`${PAIEMENT_API_URL}${id}/`);
   
   if (!response.ok) {
     throw new Error(`Échec de la récupération du paiement ${id} : ${response.statusText}`);
@@ -68,7 +68,7 @@ export async function createPaiement(payload: PaiementCreatePayload): Promise<{ 
  * Met à jour un paiement existant.
  */
 export async function updatePaiement(id: number, updatedData: Partial<Paiement>): Promise<{ success: boolean; data: Paiement }> {
-  const response = await fetch(`${PAIEMENT_API_URL}/${id}/`, {
+  const response = await fetch(`${PAIEMENT_API_URL}${id}/`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updatedData),
@@ -91,7 +91,7 @@ export async function updatePaiement(id: number, updatedData: Partial<Paiement>)
  * Supprime un paiement.
  */
 export async function deletePaiement(id: number): Promise<void> {
-  const response = await fetch(`${PAIEMENT_API_URL}/${id}/`, {
+  const response = await fetch(`${PAIEMENT_API_URL}${id}/`, {
     method: 'DELETE',
   });
 
