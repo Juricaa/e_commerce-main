@@ -8,7 +8,7 @@ import type {
   LoginResponse 
 } from '../types/utilisateur';
 
-const UTILISATEUR_API_URL = `${API_BASE_URL}/utilisateurs`;
+const UTILISATEUR_API_URL = `${API_BASE_URL}/utilisateurs/`;
 
 export interface UtilisateurFilters {
   nom?: string;
@@ -25,7 +25,7 @@ export async function loginUtilisateur(loginData: LoginPayload): Promise<LoginRe
   console.log("Tentative de connexion:", { email: loginData.email });
   
   try {
-    const response = await fetch(`${UTILISATEUR_API_URL}/login/`, {
+    const response = await fetch(`${UTILISATEUR_API_URL}login/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -155,7 +155,7 @@ export async function updateUtilisateur(id: string, updatedData: UtilisateurUpda
   console.log("Mise à jour de l'utilisateur", id, "avec:", updatedData);
   
   try {
-    const response = await fetch(`${UTILISATEUR_API_URL}/${id}/`, {
+    const response = await fetch(`${UTILISATEUR_API_URL}${id}/`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -186,7 +186,7 @@ export async function updateUtilisateur(id: string, updatedData: UtilisateurUpda
  */
 export async function deleteUtilisateur(id: string): Promise<void> {
   try {
-    const response = await fetch(`${UTILISATEUR_API_URL}/${id}/`, {
+    const response = await fetch(`${UTILISATEUR_API_URL}${id}/`, {
       method: 'DELETE',
     });
 

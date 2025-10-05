@@ -10,59 +10,65 @@ import {
   FormLayout,
   TextField,
   Select,
-  Spinner, // Ajout pour l'indicateur de chargement
+  Spinner,
+  Checkbox,
 } from "@shopify/polaris";
 import { PlusIcon, EditIcon, DeleteIcon } from "@shopify/polaris-icons";
 
-import type { User } from "../../types/client";
-// 🚨 Importation des fonctions du contrôleur d'API 🚨
+import type { Utilisateur, UtilisateurCreatePayload } from "../../types/utilisateur";
 import {
-  getAllClients,
-  createClient,
-  updateClient,
-  deleteClient,
-} from "../../controllers/clientController"; 
+  getAllUtilisateurs,
+  createUtilisateur,
+  updateUtilisateur,
+  deleteUtilisateur,
+  toggleUtilisateurStatus,
+} from "../../controllers/utilisateurController";
 
-import type { NewClientData } from "../../controllers/clientController";// Assurez-vous que le chemin est correct
-
-// Configuration des options de rôle (pour l'affichage et l'envoi à l'API)
+// Configuration des options de rôle
 const roleOptions = [
-  { label: 'Admin', value: 'admin' },
-  { label: 'Livreur', value: 'delivery' }, // Utilisez le rôle 'Livreur' si c'est ce que l'API attend
+  { label: 'Administrateur', value: 'admin' },
+  { label: 'Livreur', value: 'livreur' },
 ];
 
-// Définit le type pour les données du formulaire, incluant le mot de passe
+// Définit le type pour les données du formulaire
 interface FormData {
   nom: string;
   prenom: string;
-  role: 'delivery' | 'admin';
+  role: 'admin' | 'livreur';
   email: string;
-  telephone: string;
-  adresse: string;
-  password?: string; // Ajout du mot de passe
+  mot_de_passe: string;
+  status: boolean;
 }
 
 export function UserManagement() {
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<Utilisateur[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<Utilisateur | null>(null);
   const [formData, setFormData] = useState<FormData>({
     nom: "",
     prenom: "",
     role: "admin",
     email: "",
-    telephone: "",
-    adresse: "",
-    password: "", // Initialisation du mot de passe
+    mot_de_passe: "",
+    status: true,
   });
 
-  // 1. 🚨 LOGIQUE POUR RÉCUPÉRER LES UTILISATEURS (READ) 🚨
+  // Récupérer tous les utilisateurs
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
-    const clients = await getAllClients();
-    setUsers(clients);
-    setIsLoading(false);
+    try {
+      const result = await getAllUtilisateurs();
+      if (result.success) {
+        setUsers(result.data);
+      } else {
+        console.error("Erreur lors du chargement des utilisateurs");
+      }
+    } catch (error) {
+      console.error("Erreur:", error);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -77,100 +83,128 @@ export function UserManagement() {
       prenom: "",
       role: "admin",
       email: "",
-      telephone: "",
-      adresse: "",
-      password: "", // Le mot de passe est obligatoire pour la création
+      mot_de_passe: "",
+      status: true,
     });
     setIsModalOpen(true);
   };
 
   // Gère l'édition d'un utilisateur existant
-  const handleEditUser = (user: User) => {
+  const handleEditUser = (user: Utilisateur) => {
     setEditingUser(user);
     setFormData({
       nom: user.nom,
       prenom: user.prenom,
-      role: user.role as 'delivery' | 'admin',
+      role: user.role,
       email: user.email,
-      telephone: user.telephone,
-      adresse: user.adresse,
-      password: "", // Le mot de passe est souvent vide lors de l'édition et envoyé seulement si modifié
+      mot_de_passe: "", // Mot de passe vide pour l'édition
+      status: user.status,
     });
     setIsModalOpen(true);
   };
 
-  // 2. 🚨 LOGIQUE POUR SUPPRIMER UN UTILISATEUR (DELETE) 🚨
-  const handleDeleteUser = async (id: number) => {
+  // Gère la suppression d'un utilisateur
+  const handleDeleteUser = async (id: string) => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")) {
-      const success = await deleteClient(id);
-      if (success) {
-        // Rafraîchir la liste après une suppression réussie
-        await fetchUsers(); 
-        console.log(`Client ${id} supprimé.`);
-      } else {
+      try {
+        await deleteUtilisateur(id);
+        await fetchUsers();
+        console.log(`Utilisateur ${id} supprimé.`);
+      } catch (error) {
+        console.error("Erreur lors de la suppression:", error);
         alert("Échec de la suppression de l'utilisateur.");
       }
     }
   };
 
-  // 3. 🚨 LOGIQUE POUR SAUVEGARDER/MODIFIER (CREATE/UPDATE) 🚨
+  // Gère l'activation/désactivation d'un utilisateur
+  const handleToggleStatus = async (user: Utilisateur) => {
+    try {
+      const result = await toggleUtilisateurStatus(user.id_utilisateur, !user.status);
+      if (result.success) {
+        await fetchUsers();
+        console.log(`Statut de l'utilisateur ${user.id_utilisateur} mis à jour`);
+      }
+    } catch (error) {
+      console.error("Erreur lors du changement de statut:", error);
+      alert("Erreur lors du changement de statut.");
+    }
+  };
+
+  // Sauvegarde/Mise à jour d'un utilisateur
   const handleSaveUser = async () => {
-    if (!formData.nom || !formData.prenom || !formData.email) return;
+    if (!formData.nom || !formData.prenom || !formData.email) {
+      alert("Veuillez remplir les champs obligatoires (Nom, Prénom, Email)");
+      return;
+    }
+
+    // Pour la création, le mot de passe est obligatoire
+    if (!editingUser && !formData.mot_de_passe) {
+      alert("Le mot de passe est obligatoire pour la création d'un nouvel utilisateur.");
+      return;
+    }
 
     setIsLoading(true);
-    let success = false;
-    
-    // Données de base à envoyer à l'API
-    const payload = {
-      nom: formData.nom,
-      prenom: formData.prenom,
-      role: formData.role,
-      email: formData.email,
-      telephone: formData.telephone,
-      adresse: formData.adresse,
-      // Le mot de passe est inclus uniquement s'il est fourni (création ou mise à jour)
-      ...(formData.password && { password: formData.password }),
-    };
+    try {
+      if (editingUser) {
+        // MODE MISE À JOUR
+        const payload: any = {
+          nom: formData.nom,
+          prenom: formData.prenom,
+          role: formData.role,
+          email: formData.email,
+          status: formData.status,
+        };
+        
+        // Inclure le mot de passe seulement s'il a été modifié
+        if (formData.mot_de_passe) {
+          payload.mot_de_passe = formData.mot_de_passe;
+        }
 
-    if (editingUser) {
-      // MODE MISE À JOUR (PUT)
-      const updatedUser = await updateClient(editingUser.idClient, payload as Partial<User>);
-      success = !!updatedUser;
-    } else {
-      // MODE CRÉATION (POST)
-      // Le mot de passe est obligatoire pour la création.
-      if (!formData.password) {
-        alert("Le mot de passe est obligatoire pour la création d'un nouvel utilisateur.");
-        setIsLoading(false);
-        return;
+        const result = await updateUtilisateur(editingUser.id_utilisateur, payload);
+        if (result.success) {
+          await fetchUsers();
+          setIsModalOpen(false);
+        } else {
+          alert("Erreur lors de la mise à jour de l'utilisateur.");
+        }
+      } else {
+        // MODE CRÉATION
+        const payload: UtilisateurCreatePayload = {
+          nom: formData.nom,
+          prenom: formData.prenom,
+          role: formData.role,
+          email: formData.email,
+          mot_de_passe: formData.mot_de_passe,
+          status: formData.status,
+        };
+
+        const result = await createUtilisateur(payload);
+        if (result.success) {
+          await fetchUsers();
+          setIsModalOpen(false);
+        } else {
+          alert("Erreur lors de la création de l'utilisateur.");
+        }
       }
-
-      
-      const newUser = await createClient(payload as NewClientData); 
-      success = !!newUser;
+    } catch (error) {
+      console.error("Erreur lors de l'enregistrement:", error);
+      alert("Erreur lors de l'enregistrement de l'utilisateur.");
+    } finally {
+      setIsLoading(false);
     }
-
-    if (success) {
-      await fetchUsers(); // Rafraîchir la liste après sauvegarde
-      setIsModalOpen(false);
-    } else {
-      alert("Erreur lors de l'enregistrement de l'utilisateur. Vérifiez la console pour plus de détails.");
-    }
-    setIsLoading(false);
   };
 
   // Préparation des lignes pour la DataTable
   const rows = users.map((user) => [
-    user.idClient,
+    user.id_utilisateur,
     user.nom,
     user.prenom,
-    user.role,
+    user.role === 'admin' ? 'Administrateur' : 'Livreur',
     user.email,
-    user.telephone,
-    user.adresse,
-    // Note: Utilisation de 'dateInscription' pour correspondre au format de l'API
-    new Date(user.dateInscription).toLocaleDateString(), 
-    <div key={user.idClient} style={{ display: "flex", gap: "8px" }}>
+    new Date(user.date_creation).toLocaleDateString('fr-FR'),
+    user.status ? 'Actif' : 'Inactif',
+    <div key={user.id_utilisateur} style={{ display: "flex", gap: "8px" }}>
       <Button
         size="slim"
         icon={EditIcon}
@@ -181,9 +215,17 @@ export function UserManagement() {
       </Button>
       <Button
         size="slim"
+        tone={user.status ? "critical" : "success"}
+        onClick={() => handleToggleStatus(user)}
+        disabled={isLoading}
+      >
+        {user.status ? "Désactiver" : "Activer"}
+      </Button>
+      <Button
+        size="slim"
         tone="critical"
         icon={DeleteIcon}
-        onClick={() => handleDeleteUser(user.idClient)}
+        onClick={() => handleDeleteUser(user.id_utilisateur)}
         disabled={isLoading}
       >
         Supprimer
@@ -209,8 +251,8 @@ export function UserManagement() {
             </div>
           ) : (
             <DataTable
-              columnContentTypes={["numeric", "text", "text", "text", "text", "text", "text", "text", "text"]}
-              headings={["ID", "Nom", "Prénom", "Rôle", "Email", "Téléphone", "Adresse", "Date d'inscription", "Actions"]}
+              columnContentTypes={["text", "text", "text", "text", "text", "text", "text", "text"]}
+              headings={["ID", "Nom", "Prénom", "Rôle", "Email", "Date création", "Statut", "Actions"]}
               rows={rows}
             />
           )}
@@ -242,18 +284,20 @@ export function UserManagement() {
                 value={formData.nom}
                 onChange={(value) => setFormData({ ...formData, nom: value })}
                 autoComplete="off"
+                required
               />
               <TextField
                 label="Prénom"
                 value={formData.prenom}
                 onChange={(value) => setFormData({ ...formData, prenom: value })}
                 autoComplete="off"
+                required
               />
               <Select
                 label="Rôle"
                 options={roleOptions}
                 value={formData.role}
-                onChange={(value) => setFormData({ ...formData, role: value as 'delivery' | 'admin' })}
+                onChange={(value) => setFormData({ ...formData, role: value as 'admin' | 'livreur' })}
               />
               <TextField
                 label="Email"
@@ -261,28 +305,21 @@ export function UserManagement() {
                 value={formData.email}
                 onChange={(value) => setFormData({ ...formData, email: value })}
                 autoComplete="off"
+                required
               />
-              {/* Le mot de passe est requis seulement si on ajoute ou si on veut le modifier */}
               <TextField
                 label="Mot de passe"
                 type="password"
-                value={formData.password}
-                onChange={(value) => setFormData({ ...formData, password: value })}
+                value={formData.mot_de_passe}
+                onChange={(value) => setFormData({ ...formData, mot_de_passe: value })}
                 autoComplete="new-password"
                 placeholder={editingUser ? "Laisser vide si inchangé" : "Obligatoire pour la création"}
+                helpText={editingUser ? "Remplir seulement si vous souhaitez changer le mot de passe" : undefined}
               />
-              <TextField
-                label="Téléphone"
-                value={formData.telephone}
-                onChange={(value) => setFormData({ ...formData, telephone: value })}
-                autoComplete="off"
-              />
-              <TextField
-                label="Adresse"
-                value={formData.adresse}
-                onChange={(value) => setFormData({ ...formData, adresse: value })}
-                multiline
-                autoComplete="off"
+              <Checkbox
+                label="Utilisateur actif"
+                checked={formData.status}
+                onChange={(value) => setFormData({ ...formData, status: value })}
               />
             </FormLayout>
           </Form>

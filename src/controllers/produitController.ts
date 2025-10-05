@@ -55,7 +55,7 @@ export async function getAllProducts(filters?: ProduitFilters): Promise<{ succes
  * Récupère un produit par son ID.
  */
 export async function getProductById(id: string): Promise<{ success: boolean; data: Produit }> {
-  const url = `${PRODUIT_API_URL}/${id}/`;
+  const url = `${PRODUIT_API_URL}${id}/`;
   
   try {
     const response = await fetch(url, {
@@ -113,7 +113,7 @@ export async function createProduct(productData: NewProductData): Promise<{ succ
  * Met à jour un produit existant via l'API (PUT).
  */
 export async function updateProduct(idProduit: string, productData: UpdateProductData): Promise<{ success: boolean; data: Produit }> {
-  const url = `${PRODUIT_API_URL}/${idProduit}/`;
+  const url = `${PRODUIT_API_URL}${idProduit}/`;
   console.log("Updating product with data:", productData);
   
   try {
@@ -144,7 +144,7 @@ export async function updateProduct(idProduit: string, productData: UpdateProduc
  * Supprime un produit via l'API (DELETE).
  */
 export async function deleteProduct(idProduit: string): Promise<void> {
-  const url = `${PRODUIT_API_URL}/${idProduit}/`;
+  const url = `${PRODUIT_API_URL}${idProduit}/`;
   
   try {
     const response = await fetch(url, {

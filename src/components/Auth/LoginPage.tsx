@@ -124,7 +124,7 @@ export function LoginPage() {
             <p>Sélectionnez votre rôle pour accéder aux outils dédiés.</p>
           </div>
 
-          <div className="auth-role-toggle" role="tablist" aria-label="Choisir un rôle">
+          {/* <div className="auth-role-toggle" role="tablist" aria-label="Choisir un rôle">
             {roleOptions.map((option) => {
               const isSelected = option.value === role;
               return (
@@ -142,7 +142,7 @@ export function LoginPage() {
                 </button>
               );
             })}
-          </div>
+          </div> */}
 
           <form className="auth-form" onSubmit={handleSubmit}>
             <label className="auth-label">
@@ -186,7 +186,7 @@ export function LoginPage() {
             >
               {isLoading 
                 ? "Connexion en cours..." 
-                : `Se connecter"}`}
+                : `Se connecter`}
             </button>
           </form>
 
@@ -195,12 +195,7 @@ export function LoginPage() {
               ← Retour à la boutique
             </Link>
             
-            {/* Information de test (optionnel - à supprimer en production) */}
-            <div className="auth-info">
-              <small>
-                <strong>Test :</strong> Utilisez les utilisateurs créés dans votre base de données Django
-              </small>
-            </div>
+
           </div>
         </div>
       </div>
