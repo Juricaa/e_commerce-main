@@ -264,16 +264,16 @@ export function Storefront() {
       await createPaiement(paiementPayload);
   
       // 5️⃣ Générer le QR code
-      const reference = `CMD-${nouvelleCommande.data.id_commande}`;
+      const reference = nouvelleCommande.data.id_commande;
       const qrData = JSON.stringify({
-        ref: reference,
-        idCde: nouvelleCommande.data.id_commande,
-        nom: clientPayload.nom,
+        reff: reference,
+        id_commande: nouvelleCommande.data.id_commande,
+        nom_client: clientPayload.nom,
         email: clientPayload.email,
         telephone: clientPayload.telephone,
         total: cartTotal,
         produits: cartItems.map(item => ({
-          nom: item.product.nom_produit,
+          nom_produit: item.product.nom_produit,
           quantite: item.quantity,
           prix: item.product.prix
         }))
