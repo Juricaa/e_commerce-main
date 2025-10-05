@@ -10,6 +10,7 @@ import { ProductManagement } from "./components/Dashboard/ProductManagement";
 import { UserManagement } from "./components/Dashboard/UserManagement";
 import { OrderManagement } from "./components/Dashboard/OrderManagement";
 import { InvoiceManagement } from "./components/Dashboard/InvoiceManagement";
+import {InventaireManagement} from "./components/Dashboard/InventaireManagement";
 
 function App() {
   return (
@@ -59,6 +60,14 @@ function App() {
                   <InvoiceManagement />
                 </Layout>
               }
+            />
+            <Route
+                path="/admin/inventory"
+                element={
+                  <Layout>
+                    <InventaireManagement />
+                  </Layout>
+                }
             />
           </Routes>
         </Frame>

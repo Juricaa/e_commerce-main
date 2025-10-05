@@ -54,7 +54,7 @@ export async function getAllInventories(filters?: InventaireFilters): Promise<{ 
 // =======================================================
 export async function getInventoryById(id: number): Promise<{ success: boolean; data: Inventory }> {
   try {
-    const response = await fetch(`${INVENTAIRE_API_URL}/${id}/`);
+    const response = await fetch(`${INVENTAIRE_API_URL}${id}/`);
     
     if (!response.ok) {
       throw new Error(`Erreur lors de la récupération de l'inventaire ${id}: ${response.statusText}`);
@@ -111,7 +111,7 @@ export async function updateInventory(id: number, updatedData: Partial<Inventory
   console.log("Mise à jour de l'inventaire", id, "avec les données:", updatedData);
   
   try {
-    const response = await fetch(`${INVENTAIRE_API_URL}/${id}/`, {
+    const response = await fetch(`${INVENTAIRE_API_URL}${id}/`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -141,7 +141,7 @@ export async function updateInventory(id: number, updatedData: Partial<Inventory
 // =======================================================
 export async function deleteInventory(id: number): Promise<void> {
   try {
-    const response = await fetch(`${INVENTAIRE_API_URL}/${id}/`, {
+    const response = await fetch(`${INVENTAIRE_API_URL}${id}/`, {
       method: 'DELETE',
     });
 

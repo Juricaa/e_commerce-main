@@ -16,6 +16,7 @@ import {
   SettingsIcon,
   SearchIcon,
   ChevronDownIcon,
+  InventoryIcon,
 } from "@shopify/polaris-icons";
 
 export function Sidebar() {
@@ -68,6 +69,18 @@ export function Sidebar() {
                 icon: OrderIcon,
                 selected: false,
               },
+
+              {
+                url: "/admin/invoices",
+                label: "Invoices",
+                icon: OrderIcon,
+              },
+
+              {
+                url: "/admin/inventory",
+                label: "Inventory",
+                icon: InventoryIcon,
+              },
             ]}
         />
 
@@ -81,11 +94,7 @@ export function Sidebar() {
               label: "Users",
               icon: PersonIcon,
             },
-            {
-              url: "/admin/invoices",
-              label: "Invoices",
-              icon: OrderIcon,
-            },
+            
             {
               url: "#",
               label: "Settings",
