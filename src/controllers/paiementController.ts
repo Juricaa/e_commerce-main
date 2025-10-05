@@ -1,7 +1,7 @@
 import { API_BASE_URL } from './baseUrl';
 import type { Paiement, PaiementCreatePayload } from '../types/paiement';
 
-const PAIEMENT_API_URL = `${API_BASE_URL}/paiements`;
+const PAIEMENT_API_URL = `${API_BASE_URL}/paiements/`;
 
 /**
  * Récupère tous les paiements.

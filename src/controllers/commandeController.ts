@@ -1,7 +1,7 @@
 import { API_BASE_URL } from './baseUrl';
 import type { Commande } from '../types/commande';
 
-const COMMANDE_API_URL = `${API_BASE_URL}/commandes`;
+const COMMANDE_API_URL = `${API_BASE_URL}/commandes/`;
 
 export interface ClientData {
   nom: string;
@@ -27,10 +27,10 @@ export async function getAllCommandes(filters?: {
   const url = new URL(COMMANDE_API_URL);
   
   if (filters?.id_client) {
-    url.searchParams.append('id_client', filters.id_client);
+    url.searchParams.append('id_client/', filters.id_client);
   }
   if (filters?.statut) {
-    url.searchParams.append('statut', filters.statut);
+    url.searchParams.append('statut/', filters.statut);
   }
 
   const response = await fetch(url.toString());

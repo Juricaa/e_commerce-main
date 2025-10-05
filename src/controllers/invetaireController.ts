@@ -1,72 +1,103 @@
 import { API_BASE_URL } from './baseUrl';
-import type { Inventory } from '../types/inventaire'; // Assurez-vous que le chemin vers votre type est correct
+import type { Inventory } from '../types/inventaire';
 
-const INVENTAIRE_API_URL = `${API_BASE_URL}/inventaires`;
+const INVENTAIRE_API_URL = `${API_BASE_URL}/inventaires/`;
+
+export interface InventaireFilters {
+  id_produit?: string;
+  mouvement?: 'ENTREE' | 'SORTIE';
+  date_debut?: string;
+  date_fin?: string;
+}
 
 // =======================================================
-// READ : Récupérer tous les mouvements d'inventaire (GET /api/inventaires)
+// READ : Récupérer tous les mouvements d'inventaire
 // =======================================================
-export async function getAllInventories(): Promise<Inventory[]> {
+export async function getAllInventories(filters?: InventaireFilters): Promise<{ success: boolean; data: Inventory[] }> {
+  const url = new URL(INVENTAIRE_API_URL);
+  
+  // Ajouter les filtres s'ils sont présents
+  if (filters?.id_produit) {
+    url.searchParams.append('id_produit', filters.id_produit);
+  }
+  if (filters?.mouvement) {
+    url.searchParams.append('mouvement', filters.mouvement);
+  }
+  if (filters?.date_debut) {
+    url.searchParams.append('date_debut', filters.date_debut);
+  }
+  if (filters?.date_fin) {
+    url.searchParams.append('date_fin', filters.date_fin);
+  }
+
   try {
-    const response = await fetch(INVENTAIRE_API_URL);
+    const response = await fetch(url.toString());
     
     if (!response.ok) {
-      // Gérer les erreurs HTTP (ex: 404, 500)
       throw new Error(`Erreur HTTP: ${response.status}`);
     }
 
-    const data: Inventory[] = await response.json();
-    return data;
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error('Erreur lors de la récupération des inventaires');
+    }
+
+    return result;
   } catch (error) {
     console.error("Erreur lors de la récupération des inventaires:", error);
-    // Optionnel: lancer une erreur plus spécifique ou retourner un tableau vide
-    return []; 
+    throw error;
   }
 }
 
 // =======================================================
-// READ : Récupérer un mouvement d'inventaire par ID (GET /api/inventaires/{id})
+// READ : Récupérer un mouvement d'inventaire par ID
 // =======================================================
-export async function getInventoryById(id: number): Promise<Inventory> {
+export async function getInventoryById(id: number): Promise<{ success: boolean; data: Inventory }> {
   try {
-    const response = await fetch(`${INVENTAIRE_API_URL}/${id}`);
+    const response = await fetch(`${INVENTAIRE_API_URL}/${id}/`);
     
     if (!response.ok) {
       throw new Error(`Erreur lors de la récupération de l'inventaire ${id}: ${response.statusText}`);
     }
 
-    const data: Inventory = await response.json();
-    return data;
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error('Inventaire non trouvé');
+    }
+
+    return result;
   } catch (error) {
     console.error(`Erreur lors de la récupération de l'inventaire ${id}:`, error);
-    throw error; // Renvoyer l'erreur pour la gestion côté composant
+    throw error;
   }
 }
 
-
 // =======================================================
-// CREATE : Ajouter un nouveau mouvement (POST /api/inventaires)
+// CREATE : Ajouter un nouveau mouvement
 // =======================================================
-export async function createInventory(newInventory: Omit<Inventory, 'idInventaire'>): Promise<Inventory> {
+export async function createInventory(newInventory: Omit<Inventory, 'id_inventaire'>): Promise<{ success: boolean; data: Inventory }> {
+  console.log("Payload de création d'inventaire :", newInventory);
+  
   try {
     const response = await fetch(INVENTAIRE_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // Ajoutez ici votre jeton d'authentification si nécessaire (Authorization: Bearer ...)
       },
       body: JSON.stringify(newInventory),
     });
 
     if (!response.ok) {
-      // Tenter de lire le message d'erreur du backend
       const errorDetail = await response.text();
       throw new Error(`Échec de la création de l'inventaire. Statut: ${response.status}. Détails: ${errorDetail}`);
     }
 
-    // Le backend renvoie généralement l'objet créé avec l'ID
-    const createdInventory: Inventory = await response.json();
-    return createdInventory;
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error('Erreur lors de la création de l\'inventaire');
+    }
+
+    return result;
   } catch (error) {
     console.error("Erreur lors de la création de l'inventaire:", error);
     throw error;
@@ -74,11 +105,13 @@ export async function createInventory(newInventory: Omit<Inventory, 'idInventair
 }
 
 // =======================================================
-// UPDATE : Mettre à jour un mouvement existant (PUT /api/inventaires/{id})
+// UPDATE : Mettre à jour un mouvement existant
 // =======================================================
-export async function updateInventory(id: number, updatedData: Partial<Inventory>): Promise<Inventory> {
+export async function updateInventory(id: number, updatedData: Partial<Inventory>): Promise<{ success: boolean; data: Inventory }> {
+  console.log("Mise à jour de l'inventaire", id, "avec les données:", updatedData);
+  
   try {
-    const response = await fetch(`${INVENTAIRE_API_URL}/${id}`, {
+    const response = await fetch(`${INVENTAIRE_API_URL}/${id}/`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -87,13 +120,16 @@ export async function updateInventory(id: number, updatedData: Partial<Inventory
     });
 
     if (!response.ok) {
-       const errorDetail = await response.text();
-       throw new Error(`Échec de la mise à jour de l'inventaire ${id}. Statut: ${response.status}. Détails: ${errorDetail}`);
+      const errorDetail = await response.text();
+      throw new Error(`Échec de la mise à jour de l'inventaire ${id}. Statut: ${response.status}. Détails: ${errorDetail}`);
     }
 
-    // Le backend renvoie souvent l'objet mis à jour
-    const updatedInventory: Inventory = await response.json();
-    return updatedInventory;
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error('Erreur lors de la mise à jour de l\'inventaire');
+    }
+
+    return result;
   } catch (error) {
     console.error(`Erreur lors de la mise à jour de l'inventaire ${id}:`, error);
     throw error;
@@ -101,21 +137,69 @@ export async function updateInventory(id: number, updatedData: Partial<Inventory
 }
 
 // =======================================================
-// DELETE : Supprimer un mouvement (DELETE /api/inventaires/{id})
+// DELETE : Supprimer un mouvement
 // =======================================================
 export async function deleteInventory(id: number): Promise<void> {
   try {
-    const response = await fetch(`${INVENTAIRE_API_URL}/${id}`, {
+    const response = await fetch(`${INVENTAIRE_API_URL}/${id}/`, {
       method: 'DELETE',
-      // Les headers ne sont pas toujours nécessaires pour DELETE, mais peuvent l'être pour l'authentification
     });
 
     if (!response.ok) {
       throw new Error(`Échec de la suppression de l'inventaire ${id}. Statut: ${response.status}`);
     }
-    // Si la suppression réussit, la fonction ne retourne rien (void)
   } catch (error) {
     console.error(`Erreur lors de la suppression de l'inventaire ${id}:`, error);
     throw error;
   }
+}
+
+// =======================================================
+// DELETE : Supprimer tous les mouvements d'inventaire
+// =======================================================
+export async function deleteAllInventories(): Promise<void> {
+  try {
+    const response = await fetch(INVENTAIRE_API_URL, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Échec de la suppression de tous les inventaires. Statut: ${response.status}`);
+    }
+  } catch (error) {
+    console.error("Erreur lors de la suppression de tous les inventaires:", error);
+    throw error;
+  }
+}
+
+// =======================================================
+// FONCTIONS SPÉCIALISÉES
+// =======================================================
+
+/**
+ * Récupère les mouvements d'inventaire pour un produit spécifique
+ */
+export async function getInventoryByProduct(id_produit: string): Promise<{ success: boolean; data: Inventory[] }> {
+  return getAllInventories({ id_produit });
+}
+
+/**
+ * Récupère les entrées d'inventaire
+ */
+export async function getInventoryEntries(): Promise<{ success: boolean; data: Inventory[] }> {
+  return getAllInventories({ mouvement: 'ENTREE' });
+}
+
+/**
+ * Récupère les sorties d'inventaire
+ */
+export async function getInventoryExits(): Promise<{ success: boolean; data: Inventory[] }> {
+  return getAllInventories({ mouvement: 'SORTIE' });
+}
+
+/**
+ * Récupère les mouvements d'inventaire pour une période
+ */
+export async function getInventoryByDateRange(date_debut: string, date_fin: string): Promise<{ success: boolean; data: Inventory[] }> {
+  return getAllInventories({ date_debut, date_fin });
 }

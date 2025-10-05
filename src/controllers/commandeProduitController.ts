@@ -1,7 +1,7 @@
 import { API_BASE_URL } from './baseUrl';
 import type { CommandeProduit, CommandeProduitCreatePayload } from '../types/commandeProduit'; 
 
-const COMMANDE_PRODUIT_API_URL = `${API_BASE_URL}/commande-produits`;
+const COMMANDE_PRODUIT_API_URL = `${API_BASE_URL}/commande-produits/`;
 
 export interface CommandeProduitFilters {
   id_commande?: number;
@@ -16,10 +16,10 @@ export async function getAllCommandeProduits(filters?: CommandeProduitFilters): 
   
   // Ajouter les filtres s'ils sont présents
   if (filters?.id_commande) {
-    url.searchParams.append('id_commande', filters.id_commande.toString());
+    url.searchParams.append('id_commande/', filters.id_commande.toString());
   }
   if (filters?.id_produit) {
-    url.searchParams.append('id_produit', filters.id_produit.toString());
+    url.searchParams.append('id_produit/', filters.id_produit.toString());
   }
 
   const response = await fetch(url.toString());

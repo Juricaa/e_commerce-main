@@ -22,5 +22,5 @@ export interface PaiementCreatePayload {
   montant: number;
   methode_paiement: string;
   statut_paiement?: StatutPaiement; // Optionnel, default = 'en attente'
-  id_commande: number;
+  id_commande: string; // ID de la commande associée
 }

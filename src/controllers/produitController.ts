@@ -1,7 +1,7 @@
 import { API_BASE_URL } from './baseUrl';
 import type { Produit } from '../types/produit';
 
-const PRODUIT_API_URL = `${API_BASE_URL}/produits`;
+const PRODUIT_API_URL = `${API_BASE_URL}/produits/`;
 
 export interface ProduitFilters {
   nom_produit?: string;
@@ -19,10 +19,10 @@ export async function getAllProducts(filters?: ProduitFilters): Promise<{ succes
   
   // Ajouter les filtres s'ils sont présents
   if (filters?.nom_produit) {
-    url.searchParams.append('name', filters.nom_produit);
+    url.searchParams.append('name/', filters.nom_produit);
   }
   if (filters?.categorie) {
-    url.searchParams.append('type', filters.categorie);
+    url.searchParams.append('type/', filters.categorie);
   }
 
   try {
