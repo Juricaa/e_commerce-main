@@ -16,6 +16,8 @@ import {
     CheckIcon,
 } from "@shopify/polaris-icons";
 import "../../styles/delivery.css";
+import { updatePaiement } from "../../controllers/paiementController";
+import { updateCommande } from "../../controllers/commandeController";
 
 // Types pour les données QR Code
 type ProduitQr = {
@@ -25,7 +27,7 @@ type ProduitQr = {
 };
 
 type QrData = {
-  reff: string;
+  id_paiement: string;
   id_commande: string;
   nom_client: string;
   email: string;
@@ -49,8 +51,8 @@ export function DeliveryScanner() {
   const [scanError, setScanError] = useState<string>("");
   const [selectedRecord, setSelectedRecord] = useState<ScanRecord | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [statutPaiement, setStatutPaiement] = useState<string>("en attente");
-  const [statutLivraison, setStatutLivraison] = useState<string>("en préparation");
+  const [statutPaiement, setStatutPaiement] = useState<string>("payée");
+  const [statutLivraison, setStatutLivraison] = useState<string>("livrée");
 
   // 🔹 Fonction appelée quand un QR code est lu
   const handleScan = (data: string | null) => {
@@ -70,8 +72,8 @@ export function DeliveryScanner() {
         
         // Ouvrir automatiquement le modal pour le nouveau scan
         setSelectedRecord(newRecord);
-        setStatutPaiement("en attente");
-        setStatutLivraison("en préparation");
+        setStatutPaiement("payée");
+        setStatutLivraison("livrée");
         setModalOpen(true);
 
       } catch (error) {
@@ -87,29 +89,52 @@ export function DeliveryScanner() {
     setScanError("Impossible d'accéder à la caméra. Vérifiez les permissions.");
   };
 
-  // 🔹 Mettre à jour le statut
-  const handleUpdateStatus = () => {
-    if (selectedRecord) {
-      setScanHistory(prev =>
-        prev.map(record =>
-          record.scannedAt === selectedRecord.scannedAt
-            ? {
-                ...record,
-                statutPaiement: statutPaiement as ScanRecord["statutPaiement"],
-                statutLivraison: statutLivraison as ScanRecord["statutLivraison"],
-              }
-            : record
-        )
-      );
-      setModalOpen(false);
-    }
-  };
+
+
+// 🔹 Mettre à jour le statut et la base de données
+const handleUpdateStatus = async () => {
+  if (!selectedRecord) return;
+
+  const { id_commande, id_paiement } = selectedRecord.qrData;
+
+  try {
+    // 1️⃣ Mettre à jour la commande dans la base de données
+    await updateCommande(Number(id_commande), {
+      statut: statutLivraison, // Doit correspondre à ton enum backend
+    });
+
+    // 2️⃣ Mettre à jour le paiement dans la base de données
+    await updatePaiement(Number(id_paiement), {
+      statut_paiement: statutPaiement, // Doit correspondre à ton enum backend
+    });
+
+    // 3️⃣ Mettre à jour l'état local pour l'UI
+    setScanHistory(prev =>
+      prev.map(record =>
+        record.scannedAt === selectedRecord.scannedAt
+          ? {
+              ...record,
+              statutPaiement: statutPaiement as ScanRecord["statutPaiement"],
+              statutLivraison: statutLivraison as ScanRecord["statutLivraison"],
+            }
+          : record
+      )
+    );
+
+    setModalOpen(false);
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour des statuts :", error);
+    alert("Impossible de mettre à jour les statuts. Vérifiez la connexion ou contactez l'administrateur.");
+  }
+};
+
 
   // 🔹 Obtenir la couleur du badge selon le statut
   const getStatusColor = (statut: string) => {
     switch (statut) {
       case "payée":
       case "livrée":
+      case "effectué":
         return "success";
       case "en attente":
       case "en préparation":
@@ -127,13 +152,13 @@ export function DeliveryScanner() {
   // 🔹 Options pour les selects
   const paiementOptions = [
     { label: "En attente", value: "en attente" },
-    { label: "Payée", value: "payée" },
+    { label: "Payée", value: "effectué" },
     { label: "Échoué", value: "échoué" },
     { label: "Remboursé", value: "remboursé" },
   ];
 
   const livraisonOptions = [
-    { label: "En préparation", value: "en préparation" },
+    { label: "En préparation", value: "en attente" },
     { label: "Expédiée", value: "expédiée" },
     { label: "Livrée", value: "livrée" },
     { label: "Annulée", value: "annulée" },
@@ -201,7 +226,7 @@ export function DeliveryScanner() {
                   headings={["Heure", "Référence", "Client", "Statuts"]}
                   rows={scanHistory.map((record) => [
                     record.scannedAt,
-                    record.qrData.reff,
+                    record.qrData.id_paiement,
                     record.qrData.nom_client,
                     <div key={record.scannedAt} style={{ display: "flex", gap: "8px", flexDirection: "column" }}>
                       <Badge tone={getStatusColor(record.statutPaiement!)}>
@@ -248,7 +273,7 @@ export function DeliveryScanner() {
                     <Layout>
                       <Layout.Section variant="oneHalf">
                         <Text variant="bodyMd" as="p">
-                          <strong>Référence:</strong> {selectedRecord.qrData.reff}
+                          <strong>Référence:</strong> {selectedRecord.qrData.id_paiement}
                         </Text>
                         <Text variant="bodyMd" as="p">
                           <strong>ID Commande:</strong> {selectedRecord.qrData.id_commande}

@@ -51,19 +51,22 @@ export async function createPaiement(payload: PaiementCreatePayload): Promise<{ 
     body: JSON.stringify(payload),
   });
 
+  console.log("Statut de la réponse :", response.status, response.statusText);
+
   if (!response.ok) {
     const errorDetail = await response.text();
     throw new Error(`Échec de la création du paiement : ${errorDetail}`);
   }
 
-  const result = await response.json();
+  const result = await response.json(); // ← C'est ici qu'on récupère les données
+
+
   if (!result.success) {
     throw new Error('Erreur lors de la création du paiement');
   }
 
   return result;
 }
-
 /**
  * Met à jour un paiement existant.
  */

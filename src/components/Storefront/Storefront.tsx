@@ -261,12 +261,13 @@ export function Storefront() {
       };
   
       console.log("Création du paiement...", paiementPayload);
-      await createPaiement(paiementPayload);
-  
+      const paiementResult = await createPaiement(paiementPayload);
+      const id_paiement = paiementResult.data?.id_paiement;
+     
       // 5️⃣ Générer le QR code
-      const reference = nouvelleCommande.data.id_commande;
+    const reference = nouvelleCommande.data.id_commande.toString().padStart(6, '0');
       const qrData = JSON.stringify({
-        reff: reference,
+        id_paiement: id_paiement, 
         id_commande: nouvelleCommande.data.id_commande,
         nom_client: clientPayload.nom,
         email: clientPayload.email,

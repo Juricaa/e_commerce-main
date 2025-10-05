@@ -1,5 +1,5 @@
 // types/paiement.ts
-export type StatutPaiement = 'en attente' | 'effectué' | 'échoué' | 'remboursé';
+export type StatutPaiement = 'payée' | 'en attente' | 'effectué' | 'échoué' | 'remboursé';
 
 export interface Paiement {
   id_paiement: number;

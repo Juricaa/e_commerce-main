@@ -1,4 +1,4 @@
-export type StatutCommande =  'en attente' | 'payée' | 'expédiée' | 'annulée';
+export type StatutCommande =  'livrée' | 'en attente' | 'payée' | 'expédiée' | 'annulée' ;
 export interface Commande {
   id_commande: string;
   id_client: string;
