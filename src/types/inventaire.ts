@@ -1,8 +1,8 @@
 export type Inventory = {
-    idInventaire: number;
-    produit: string;
-    mouvement: 'ENTREE' | 'SORTIE' | 'AJUSTEMENT';
+    id_inventaire: number;
+    id_produit: string;
+    mouvement: 'entrée' | 'sortie' | 'ajustement';
     quantite: number;
-    dateMouvement: string; 
+    date_mouvement: string; 
     commentaire: string;
   };

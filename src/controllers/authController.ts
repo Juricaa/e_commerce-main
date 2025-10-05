@@ -1,5 +1,5 @@
 import { API_BASE_URL } from './baseUrl';
-import type { User } from "../types/user";
+import type { User } from "../types/client";
 
 /**
  * Tente d'authentifier un utilisateur via l'API.

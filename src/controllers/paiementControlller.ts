@@ -4,21 +4,47 @@ import type { Paiement, PaiementCreatePayload } from '../types/paiement';
 const PAIEMENT_API_URL = `${API_BASE_URL}/paiements`;
 
 /**
+ * Récupère tous les paiements.
+ */
+export async function getAllPaiements(): Promise<{ success: boolean; data: Paiement[] }> {
+  const response = await fetch(PAIEMENT_API_URL);
+  
+  if (!response.ok) {
+    throw new Error(`Échec de la récupération des paiements : ${response.statusText}`);
+  }
+  
+  const result = await response.json();
+  if (!result.success) {
+    throw new Error('Erreur lors de la récupération des paiements');
+  }
+  
+  return result;
+}
+
+/**
  * Récupère un paiement par son ID.
  */
-export async function getPaiementById(id: number): Promise<Paiement> {
-  const response = await fetch(`${PAIEMENT_API_URL}/${id}`);
+export async function getPaiementById(id: number): Promise<{ success: boolean; data: Paiement }> {
+  const response = await fetch(`${PAIEMENT_API_URL}/${id}/`);
+  
   if (!response.ok) {
     throw new Error(`Échec de la récupération du paiement ${id} : ${response.statusText}`);
   }
-  return response.json();
+  
+  const result = await response.json();
+  if (!result.success) {
+    throw new Error('Paiement non trouvé');
+  }
+  
+  return result;
 }
 
 /**
  * Crée un nouveau paiement.
- * (Souvent utilisé pour enregistrer une transaction après le processus de paiement externe)
  */
-export async function createPaiement(payload: PaiementCreatePayload): Promise<Paiement> {
+export async function createPaiement(payload: PaiementCreatePayload): Promise<{ success: boolean; data: Paiement }> {
+  console.log("Payload de création de paiement :", payload);
+  
   const response = await fetch(PAIEMENT_API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -30,14 +56,19 @@ export async function createPaiement(payload: PaiementCreatePayload): Promise<Pa
     throw new Error(`Échec de la création du paiement : ${errorDetail}`);
   }
 
-  return response.json();
+  const result = await response.json();
+  if (!result.success) {
+    throw new Error('Erreur lors de la création du paiement');
+  }
+
+  return result;
 }
 
 /**
- * Met à jour un paiement existant (utile pour changer le statut, ex: de 'EN_COURS' à 'REUSSI').
+ * Met à jour un paiement existant.
  */
-export async function updatePaiement(id: number, updatedData: Partial<Paiement>): Promise<Paiement> {
-  const response = await fetch(`${PAIEMENT_API_URL}/${id}`, {
+export async function updatePaiement(id: number, updatedData: Partial<Paiement>): Promise<{ success: boolean; data: Paiement }> {
+  const response = await fetch(`${PAIEMENT_API_URL}/${id}/`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updatedData),
@@ -48,18 +79,36 @@ export async function updatePaiement(id: number, updatedData: Partial<Paiement>)
     throw new Error(`Échec de la mise à jour du paiement ${id} : ${errorDetail}`);
   }
 
-  return response.json();
+  const result = await response.json();
+  if (!result.success) {
+    throw new Error('Erreur lors de la mise à jour du paiement');
+  }
+
+  return result;
 }
 
 /**
  * Supprime un paiement.
  */
 export async function deletePaiement(id: number): Promise<void> {
-  const response = await fetch(`${PAIEMENT_API_URL}/${id}`, {
+  const response = await fetch(`${PAIEMENT_API_URL}/${id}/`, {
     method: 'DELETE',
   });
 
   if (!response.ok) {
     throw new Error(`Échec de la suppression du paiement ${id} : ${response.statusText}`);
+  }
+}
+
+/**
+ * Supprime tous les paiements.
+ */
+export async function deleteAllPaiements(): Promise<void> {
+  const response = await fetch(PAIEMENT_API_URL, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Échec de la suppression de tous les paiements : ${response.statusText}`);
   }
 }

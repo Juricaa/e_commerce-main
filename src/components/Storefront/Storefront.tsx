@@ -7,9 +7,11 @@ import logo from "../../assets/logo.png";
 
 // Importation des types
 import type { Produit } from "../../types/produit";
-import type { CommandeCreatePayload, StatutCommande } from "../../types/commande";
-import type { CommandeProduitCreatePayload } from "../../types/commandeProduit";
-import type { PaiementCreatePayload, StatutPaiement } from "../../types/paiement";
+import type { Commande } from "../../types/commande";
+import type { StatutCommande } from "../../types/commande";
+import type { StatutPaiement } from "../../types/paiement";
+
+
 // import type { StatutCommande } from "../../types/statuts";
 
 // Importation des contrôleurs
@@ -106,8 +108,8 @@ export function Storefront() {
     setIsLoading(true);
     try {
       const productList = await getAllProducts();
-      setProducts(productList);
-    } catch (error) {
+      setProducts(productList.data);
+     } catch (error) {
       console.error("Erreur lors de la récupération des produits:", error);
       // Gérer l'erreur si besoin
     } finally {
@@ -132,10 +134,10 @@ export function Storefront() {
 
   const handleAddToCart = (product: Produit) => {
     setCartItems((previous) => {
-      const existingLine = previous.find((line) => line.product.idProduit === product.idProduit);
+      const existingLine = previous.find((line) => line.product.id_produit === product.id_produit);
       if (existingLine) {
         return previous.map((line) =>
-          line.product.idProduit === product.idProduit
+          line.product.id_produit === product.id_produit
             ? { ...line, quantity: line.quantity + 1 }
             : line,
         );
@@ -149,7 +151,7 @@ export function Storefront() {
     setCartItems((previous) =>
       previous
         .map((line) =>
-          line.product.idProduit === productId
+          line.product.id_produit === productId
             ? { ...line, quantity: Math.max(1, line.quantity + delta) }
             : line,
         )
@@ -158,7 +160,7 @@ export function Storefront() {
   };
 
   const removeFromCart = (productId: number) => {
-    setCartItems((previous) => previous.filter((line) => line.product.idProduit !== productId));
+    setCartItems((previous) => previous.filter((line) => line.product.id_produit !== productId));
   };
 
   const resetCheckoutForm = () => {
@@ -173,188 +175,97 @@ export function Storefront() {
   // LOGIQUE DE COMMANDE MISE À JOUR (Intégration API)
   // =======================================================
 
-  // const handleCheckout = async (event: FormEvent<HTMLFormElement>) => {
-  //   event.preventDefault();
-
-  //   if (cartItems.length === 0) {
-  //     setFeedback({ type: "error", message: "Votre panier est vide." });
-  //     return;
-  //   }
-
-  //   setIsSubmitting(true);
-  //   setFeedback(null);
-  //   setOrderQr(null); // Réinitialiser le QR code précédent
-
-  //   // 1. Préparation des données pour CommandeProduitCreatePayload
-  //   const commandeProduitsPayload: CommandeProduitCreatePayload[] = cartItems.map((line) => ({
-  //     idProduit: line.product.idProduit,
-  //     quantite: line.quantity,
-  //     prixUnitaire: line.product.prix, // Utiliser le prix au moment de l'ajout au panier
-  //     idCommande: 0, // Temporaire, sera remplacé par l'ID réel de la commande par le backend
-  //   }));
-
-  //   // 2. Préparation des données pour PaiementCreatePayload (Simulation d'un paiement à la livraison)
-  //   const paiementPayload: PaiementCreatePayload = {
-  //     montant: cartTotal,
-  //     methodePaiement: "PAIEMENT_LIVRAISON", // Assurez-vous que cette valeur est acceptée par votre ENUM Java
-  //     statutPaiement: "EN_ATTENTE" as StatutPaiement, // Le paiement est en attente de la livraison
-  //     idCommande: 0, // Temporaire, sera remplacé par l'ID réel de la commande par le backend
-  //   };
-    
-  //   // 3. Construction du CommandeCreatePayload final
-  //   const commandePayload: CommandeCreatePayload = {
-  //     idClient: DEFAULT_CLIENT_ID, // Utilisation de l'ID statique pour la démo
-  //     statut: "EN_ATTENTE" as StatutCommande, // Statut initial
-  //     total: cartTotal,
-  //     commandeProduits: commandeProduitsPayload,
-  //     paiements: [paiementPayload], // On envoie le paiement dans une liste
-  //   };
-
-  //   try {
-  //     // 4. Appel de l'API de création de commande
-  //     const nouvelleCommande = await createCommande(commandePayload);
-      
-  //     // 5. Génération du QR code basé sur les données de la commande créée
-  //     const reference = `CDE-${nouvelleCommande.idCommande}`; 
-      
-  //     // Inclusion des données importantes pour le livreur (Nom, Référence, Total)
-  //     const qrData = JSON.stringify({
-  //         ref: reference, 
-  //         idCde: nouvelleCommande.idCommande, 
-  //         nom: customerName.trim(), 
-  //         num: customerNumero.trim(),
-  //         total: cartTotal
-  //     });
-
-  //     const dataUrl = await toDataURL(qrData, {
-  //       errorCorrectionLevel: "M",
-  //       width: 320,
-  //     });
-
-  //     // 6. Succès et mise à jour de l'état
-  //     setOrderQr({ reference, dataUrl });
-  //     setFeedback({
-  //       type: "success",
-  //       message: `Commande #${reference} confirmée ! Présentez ce QR code au livreur lors de la livraison.`,
-  //     });
-  //     setCartItems([]);
-  //     resetCheckoutForm();
-  //   } catch (error) {
-  //     console.error("Erreur lors de la validation de la commande API:", error);
-  //     setFeedback({
-  //       type: "error",
-  //       message: "Échec de la validation de la commande. Veuillez vérifier vos informations et réessayer.",
-  //     });
-  //   } finally {
-  //     setIsSubmitting(false);
-  //   }
-  // };
-
-const handleCheckout = async (event: FormEvent<HTMLFormElement>) => {
-  event.preventDefault();
-
-  if (cartItems.length === 0) {
-    setFeedback({ type: "error", message: "Votre panier est vide." });
-    return;
-  }
-
-  setIsSubmitting(true);
-  setFeedback(null);
-  setOrderQr(null);
-
-  // Générer la date du jour au format AAAA-MM-JJ
-  const today = new Date().toISOString().split("T")[0];
-
-  // 1️⃣ Préparation des produits de la commande
-  const commandeProduitsPayload: CommandeProduitCreatePayload[] = cartItems.map((line) => {
-    const produitPayload = {
-      idProduit: line.product.idProduit,
-      nomProduit: line.product.nomProduit,
-      description: line.product.description,
-      prix: line.product.prix,
-      stock: line.product.stock,
-      // categorie: "string", // valeur placeholder, à remplacer si le backend attend une vraie catégorie
-      dateAjout: today,
-      // commandeProduits: ["string"],
-      inventaires: [
-        {
-          idInventaire: 0,
-          produit: line.product.idProduit,
-          mouvement: "ENTREE",
-          quantite: 0,
-          dateMouvement: today,
-          commentaire: "string",
-        },
-      ],
-    };
-
-    return {
-      commande: "string",
-      produit: produitPayload as any,
+  const handleCheckout = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+  
+    if (cartItems.length === 0) {
+      setFeedback({ type: "error", message: "Votre panier est vide." });
+      return;
+    }
+  
+    // ✅ Validation basique des infos client
+    if (!customerName.trim() || !customerEmail.trim() || !customerNumero.trim()) {
+      setFeedback({ type: "error", message: "Veuillez remplir vos informations client." });
+      return;
+    }
+  
+    setIsSubmitting(true);
+    setFeedback(null);
+    setOrderQr(null); // Réinitialiser le QR code précédent
+  
+    // 1️⃣ Préparer les produits de la commande
+    const commandeProduitsPayload = cartItems.map((line) => ({
+      idProduit: line.product.id_produit,
       quantite: line.quantity,
       prixUnitaire: line.product.prix,
+    }));
+  
+    // 2️⃣ Préparer le paiement
+    const paiementPayload = {
+      montant: cartTotal,
+      methodePaiement: "CASH",
+      statutPaiement: "en attente" as StatutPaiement,
     };
-  });
-
-  // 2️⃣ Préparation du paiement
-  const paiementPayload: PaiementCreatePayload = {
-    // idPaiement: 0,
-    commande: "string",
-    montant: cartTotal,
-    methodePaiement: "PAIEMENT_LIVRAISON",
-    statutPaiement: "EN_ATTENTE",
-    datePaiement: today,
-  };
-
-  // 3️⃣ Construction de la commande complète (structure conforme à ton DTO)
-  const commandePayload: CommandeCreatePayload = {
-    idCommande: 0, // valeur par défaut, sera remplacée par le backend
-    client: 1,
-    dateCommande: today,
-    statut: "EN_ATTENTE",
-    total: cartTotal,
-    commandeProduits: commandeProduitsPayload,
-    paiements: [paiementPayload],
-  };
-
-  try {
-    // 4️⃣ Appel API pour créer la commande
-    const nouvelleCommande = await createCommande(commandePayload);
-
-    // 5️⃣ Génération du QR code après création
-    const reference = `CDE-${nouvelleCommande.idCommande}`;
-    const qrData = JSON.stringify({
-      ref: reference,
-      idCde: nouvelleCommande.idCommande,
+  
+    // 3️⃣ Préparer le bloc client complet
+    const clientPayload = {
       nom: customerName.trim(),
-      num: customerNumero.trim(),
+      prenom: "", // facultatif, selon ton modèle
+      email: customerEmail.trim(),
+      telephone: customerNumero.trim(),
+      adresse: customerAddress.trim() || "Antananarivo",
+    };
+  
+    // 4️⃣ Construire la commande complète
+    const commandePayload = {
+      client: clientPayload, // ✅ On envoie le bloc client au lieu de idClient
+      statut: "en attente" as StatutCommande,
       total: cartTotal,
-    });
+      // commandeProduits: commandeProduitsPayload,
+      paiements: [paiementPayload],
+    };
+  
+    try {
+      // 5️⃣ Appel API : création commande + client
+      const nouvelleCommande = await createCommande(commandePayload);
+      
+  
+      // 6️⃣ Générer le QR code pour la commande créée
+      const reference = `CDE-${nouvelleCommande.id_commande}`;
+      const qrData = JSON.stringify({
+        ref: reference,
+        idCde: nouvelleCommande.id_commande,
+        nom: clientPayload.nom,
+        num: clientPayload.telephone,
+        total: cartTotal,
+      });
+  
+      const dataUrl = await toDataURL(qrData, {
+        errorCorrectionLevel: "M",
+        width: 320,
+      });
+  
+      // 7️⃣ Mettre à jour l'état avec succès
+      setOrderQr({ reference, dataUrl });
+      setFeedback({
+        type: "success",
+        message: `Commande #${reference} confirmée ! Présentez ce QR code au livreur.`,
+      });
+  
+      setCartItems([]); // vider le panier
+      resetCheckoutForm();
+    } catch (error) {
+      console.error("Erreur lors de la validation de la commande :", error);
+      setFeedback({
+        type: "error",
+        message: "Échec de la validation de la commande. Vérifiez vos informations.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
 
-    const dataUrl = await toDataURL(qrData, {
-      errorCorrectionLevel: "M",
-      width: 320,
-    });
-
-    // 6️⃣ Mise à jour des états après succès
-    setOrderQr({ reference, dataUrl });
-    setFeedback({
-      type: "success",
-      message: `Commande #${reference} confirmée ! Présentez ce QR code au livreur lors de la livraison.`,
-    });
-    setCartItems([]);
-    resetCheckoutForm();
-
-  } catch (error) {
-    console.error("Erreur lors de la validation de la commande API:", error);
-    setFeedback({
-      type: "error",
-      message: "Échec de la validation de la commande. Veuillez vérifier vos informations et réessayer.",
-    });
-  } finally {
-    setIsSubmitting(false);
-  }
-};
 
 
   return (
@@ -437,12 +348,12 @@ const handleCheckout = async (event: FormEvent<HTMLFormElement>) => {
         ) : (
           <div className="product-grid">
             {products.map((product) => (
-              <article key={product.idProduit} className="product-card">
+              <article key={product.id_produit} className="product-card">
                 <div className="product-image-wrapper">
-                  <img src={product.image} alt={product.nomProduit} />
+                  <img src={product.image} alt={product.nom_produit} />
                 </div>
                 <div className="product-details">
-                  <h3 className="product-name">{product.nomProduit}</h3>
+                  <h3 className="product-name">{product.nom_produit}</h3>
                   <p className="product-description">{product.description}</p>
                   <div className="product-footer">
                     <span className="product-price">{formatPrice(product.prix)}</span>
@@ -482,16 +393,16 @@ const handleCheckout = async (event: FormEvent<HTMLFormElement>) => {
               ) : (
                 <ul className="cart-list">
                   {cartItems.map((line) => (
-                    <li key={line.product.idProduit} className="cart-item">
+                    <li key={line.product.id_produit} className="cart-item">
                       <div className="cart-item-details">
-                        <h4>{line.product.nomProduit}</h4>
+                        <h4>{line.product.nom_produit}</h4>
                         <p>{formatPrice(line.product.prix)}</p>
                       </div>
                       <div className="cart-item-controls">
                         <div className="quantity-controls" aria-label="Modifier la quantité">
                           <button
                             type="button"
-                            onClick={() => updateQuantity(line.product.idProduit, -1)}
+                            onClick={() => updateQuantity(line.product.id_produit, -1)}
                             aria-label="Diminuer la quantité"
                           >
                             −
@@ -499,7 +410,7 @@ const handleCheckout = async (event: FormEvent<HTMLFormElement>) => {
                           <span>{line.quantity}</span>
                           <button
                             type="button"
-                            onClick={() => updateQuantity(line.product.idProduit, 1)}
+                            onClick={() => updateQuantity(line.product.id_produit, 1)}
                             aria-label="Augmenter la quantité"
                           >
                             +
@@ -508,7 +419,7 @@ const handleCheckout = async (event: FormEvent<HTMLFormElement>) => {
                         <button
                           className="remove-item"
                           type="button"
-                          onClick={() => removeFromCart(line.product.idProduit)}
+                          onClick={() => removeFromCart(line.product.id_produit)}
                         >
                           Retirer
                         </button>

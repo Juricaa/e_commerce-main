@@ -14,16 +14,16 @@ import {
 } from "@shopify/polaris";
 import { PlusIcon, EditIcon, DeleteIcon } from "@shopify/polaris-icons";
 
-import type { User } from "../../types/user";
+import type { User } from "../../types/client";
 // 🚨 Importation des fonctions du contrôleur d'API 🚨
 import {
   getAllClients,
   createClient,
   updateClient,
   deleteClient,
-} from "../../controllers/userController"; 
+} from "../../controllers/clientController"; 
 
-import type { NewClientData } from "../../controllers/userController";// Assurez-vous que le chemin est correct
+import type { NewClientData } from "../../controllers/clientController";// Assurez-vous que le chemin est correct
 
 // Configuration des options de rôle (pour l'affichage et l'envoi à l'API)
 const roleOptions = [

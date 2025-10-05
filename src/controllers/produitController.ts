@@ -1,129 +1,201 @@
-import { API_BASE_URL } from './baseUrl'; // Assurez-vous que ce chemin est correct
+import { API_BASE_URL } from './baseUrl';
+import type { Produit } from '../types/produit';
 
-// Définition du type Product basé sur votre code front-end
-import type { Produit } from '../types/produit'; // Assurez-vous que le chemin est correct
+const PRODUIT_API_URL = `${API_BASE_URL}/produits`;
 
-// Type pour la création d'un produit (pas d'ID, la dateAjout est gérée par le back-end ou le front-end)
-export type NewProductData = Omit<Produit, 'idProduit' | 'dateAjout'>;
+export interface ProduitFilters {
+  nom_produit?: string;
+  categorie?: string;
+}
 
-// Type pour la mise à jour d'un produit (tous les champs sont optionnels)
+export type NewProductData = Omit<Produit, 'id_produit' | 'date_ajout'>;
 export type UpdateProductData = Partial<Produit>;
-
-
 
 /**
  * Récupère la liste complète des produits depuis l'API.
- * @returns Promesse résolue avec la liste des Product, ou une liste vide en cas d'erreur.
  */
-export async function getAllProducts(): Promise<Produit[]> {
-    const url = `${API_BASE_URL}/produits`;
-    try {
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                // 'Authorization': `Bearer ${token}` // Jeton si nécessaire
-            }
-        });
+export async function getAllProducts(filters?: ProduitFilters): Promise<{ success: boolean; data: Produit[] }> {
+  const url = new URL(PRODUIT_API_URL);
+  
+  // Ajouter les filtres s'ils sont présents
+  if (filters?.nom_produit) {
+    url.searchParams.append('name', filters.nom_produit);
+  }
+  if (filters?.categorie) {
+    url.searchParams.append('type', filters.categorie);
+  }
 
-        if (!response.ok) {
-            throw new Error(`Erreur API lors de la récupération des produits: ${response.status}`);
-        }
+  try {
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
 
-        const data: Produit[] = await response.json();
-        return data;
-
-    } catch (error) {
-        console.error("Erreur réseau ou API lors de la récupération de la liste des produits:", error);
-        return [];
+    if (!response.ok) {
+      throw new Error(`Erreur API lors de la récupération des produits: ${response.status}`);
     }
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error('Erreur lors de la récupération des produits');
+    }
+
+    return result;
+
+  } catch (error) {
+    console.error("Erreur réseau ou API lors de la récupération de la liste des produits:", error);
+    throw error;
+  }
+}
+
+/**
+ * Récupère un produit par son ID.
+ */
+export async function getProductById(id: string): Promise<{ success: boolean; data: Produit }> {
+  const url = `${PRODUIT_API_URL}/${id}/`;
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erreur API lors de la récupération du produit: ${response.status}`);
+    }
+
+    const produit = await response.json();
+    return { success: true, data: produit };
+
+  } catch (error) {
+    console.error(`Erreur réseau ou API lors de la récupération du produit ${id}:`, error);
+    throw error;
+  }
 }
 
 /**
  * Crée un nouveau produit via l'API (POST).
- * @param productData Les données du nouveau produit.
- * @returns Promesse résolue avec l'objet Product créé, ou null en cas d'échec.
  */
-export async function createProduct(productData: NewProductData): Promise<Produit | null> {
-    const url = `${API_BASE_URL}/produits`;
-    try {
-        const payloadWithDate = {
-            ...productData,
-            // Assurez-vous d'envoyer la date d'ajout correctement formatée si l'API l'exige
-            dateAjout: new Date().toISOString().split('T')[0] // Format YYYY-MM-DD
-        };
+export async function createProduct(productData: NewProductData): Promise<{ success: boolean; data: Produit }> {
+  console.log("Payload de création de produit :", productData);
+  
+  try {
+    const response = await fetch(PRODUIT_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(productData)
+    });
 
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payloadWithDate)
-        });
-
-        if (!response.ok) {
-            const errorBody = await response.json();
-            throw new Error(`Erreur API lors de la création du produit: ${response.status} - ${errorBody.message || response.statusText}`);
-        }
-
-        const newProduct: Produit = await response.json();
-        return newProduct;
-
-    } catch (error) {
-        console.error("Erreur réseau ou API lors de la création du produit:", error);
-        return null;
+    if (!response.ok) {
+      const errorBody = await response.json();
+      throw new Error(`Erreur API lors de la création du produit: ${response.status} - ${JSON.stringify(errorBody)}`);
     }
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error('Erreur lors de la création du produit');
+    }
+
+    return result;
+
+  } catch (error) {
+    console.error("Erreur réseau ou API lors de la création du produit:", error);
+    throw error;
+  }
 }
 
 /**
  * Met à jour un produit existant via l'API (PUT).
- * @param idProduit L'ID du produit à mettre à jour.
- * @param productData Les données partielles du produit à mettre à jour.
- * @returns Promesse résolue avec l'objet Product mis à jour, ou null en cas d'échec.
  */
-export async function updateProduct(idProduit: number, productData: UpdateProductData): Promise<Produit | null> {
-    const url = `${API_BASE_URL}/produits/${idProduit}`;
-    console.log("Updating product with data:", productData); // Log pour débogage
-    try {
-        const response = await fetch(url, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(productData)
-        });
+export async function updateProduct(idProduit: string, productData: UpdateProductData): Promise<{ success: boolean; data: Produit }> {
+  const url = `${PRODUIT_API_URL}/${idProduit}/`;
+  console.log("Updating product with data:", productData);
+  
+  try {
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(productData)
+    });
 
-        if (!response.ok) {
-            throw new Error(`Erreur API lors de la mise à jour du produit: ${response.status}`);
-        }
-
-        const updatedProduct: Produit = await response.json();
-        return updatedProduct;
-
-    } catch (error) {
-        console.error(`Erreur réseau ou API lors de la mise à jour du produit ${idProduit}:`, error);
-        return null;
+    if (!response.ok) {
+      throw new Error(`Erreur API lors de la mise à jour du produit: ${response.status}`);
     }
-}
 
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error('Erreur lors de la mise à jour du produit');
+    }
+
+    return result;
+
+  } catch (error) {
+    console.error(`Erreur réseau ou API lors de la mise à jour du produit ${idProduit}:`, error);
+    throw error;
+  }
+}
 
 /**
  * Supprime un produit via l'API (DELETE).
- * @param idProduit L'ID du produit à supprimer.
- * @returns Promesse résolue à true si la suppression réussit, false sinon.
  */
-export async function deleteProduct(idProduit: number): Promise<boolean> {
-    const url = `${API_BASE_URL}/produits/${idProduit}`;
-    try {
-        const response = await fetch(url, {
-            method: 'DELETE',
-            // headers: { 'Authorization': `Bearer ${token}` } // Jeton si nécessaire
-        });
+export async function deleteProduct(idProduit: string): Promise<void> {
+  const url = `${PRODUIT_API_URL}/${idProduit}/`;
+  
+  try {
+    const response = await fetch(url, {
+      method: 'DELETE',
+    });
 
-        if (response.status === 204 || response.ok) {
-            return true;
-        }
-
-        throw new Error(`Erreur API lors de la suppression du produit: ${response.status}`);
-
-    } catch (error) {
-        console.error(`Erreur réseau ou API lors de la suppression du produit ${idProduit}:`, error);
-        return false;
+    if (!response.ok) {
+      throw new Error(`Erreur API lors de la suppression du produit: ${response.status}`);
     }
+
+  } catch (error) {
+    console.error(`Erreur réseau ou API lors de la suppression du produit ${idProduit}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Supprime tous les produits.
+ */
+export async function deleteAllProducts(): Promise<void> {
+  try {
+    const response = await fetch(PRODUIT_API_URL, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erreur API lors de la suppression de tous les produits: ${response.status}`);
+    }
+
+  } catch (error) {
+    console.error("Erreur réseau ou API lors de la suppression de tous les produits:", error);
+    throw error;
+  }
+}
+
+/**
+ * Récupère les produits par catégorie.
+ */
+export async function getProductsByCategory(categorie: string): Promise<{ success: boolean; data: Produit[] }> {
+  return getAllProducts({ categorie });
+}
+
+/**
+ * Récupère les produits par nom (recherche).
+ */
+export async function searchProductsByName(nom_produit: string): Promise<{ success: boolean; data: Produit[] }> {
+  return getAllProducts({ nom_produit });
+}
+
+/**
+ * Récupère les produits par catégorie et nom.
+ */
+export async function searchProducts(categorie?: string, nom_produit?: string): Promise<{ success: boolean; data: Produit[] }> {
+  return getAllProducts({ categorie, nom_produit });
 }

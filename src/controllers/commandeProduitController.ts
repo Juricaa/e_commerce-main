@@ -3,36 +3,64 @@ import type { CommandeProduit, CommandeProduitCreatePayload } from '../types/com
 
 const COMMANDE_PRODUIT_API_URL = `${API_BASE_URL}/commande-produits`;
 
+export interface CommandeProduitFilters {
+  id_commande?: number;
+  id_produit?: number;
+}
+
 // =======================================================
-// READ : Récupérer toutes les lignes de commande (GET /api/commande-produits)
+// READ : Récupérer toutes les lignes de commande avec filtres optionnels
 // =======================================================
-export async function getAllCommandeProduits(): Promise<CommandeProduit[]> {
-  const response = await fetch(COMMANDE_PRODUIT_API_URL);
+export async function getAllCommandeProduits(filters?: CommandeProduitFilters): Promise<{ success: boolean; data: CommandeProduit[] }> {
+  const url = new URL(COMMANDE_PRODUIT_API_URL);
+  
+  // Ajouter les filtres s'ils sont présents
+  if (filters?.id_commande) {
+    url.searchParams.append('id_commande', filters.id_commande.toString());
+  }
+  if (filters?.id_produit) {
+    url.searchParams.append('id_produit', filters.id_produit.toString());
+  }
+
+  const response = await fetch(url.toString());
   
   if (!response.ok) {
     throw new Error(`Échec de la récupération des lignes de commande : ${response.statusText}`);
   }
-  return response.json();
+  
+  const result = await response.json();
+  if (!result.success) {
+    throw new Error('Erreur lors de la récupération des lignes de commande');
+  }
+  
+  return result;
 }
 
 // =======================================================
-// READ : Récupérer une ligne de commande par clé composée (GET /api/commande-produits/commande/{commandeId}/produit/{produitId})
+// READ : Récupérer une ligne de commande par son ID (clé primaire)
 // =======================================================
-export async function getCommandeProduitByIds(commandeId: number, produitId: number): Promise<CommandeProduit> {
-  const url = `${COMMANDE_PRODUIT_API_URL}/commande/${commandeId}/produit/${produitId}`;
+export async function getCommandeProduitById(id: number): Promise<{ success: boolean; data: CommandeProduit }> {
+  const url = `${COMMANDE_PRODUIT_API_URL}/${id}/`;
   const response = await fetch(url);
   
   if (!response.ok) {
-    throw new Error(`Échec de la récupération de la ligne (${commandeId}, ${produitId}) : ${response.statusText}`);
+    throw new Error(`Échec de la récupération de la ligne ${id} : ${response.statusText}`);
   }
-  return response.json();
+  
+  const result = await response.json();
+  if (!result.success) {
+    throw new Error('Ligne de commande non trouvée');
+  }
+  
+  return result;
 }
 
 // =======================================================
-// CREATE : Ajouter une nouvelle ligne (POST /api/commande-produits)
+// CREATE : Ajouter une nouvelle ligne
 // =======================================================
-// Nous utilisons ici le type Payload qui contient les IDs nécessaires (idCommande, idProduit, etc.)
-export async function createCommandeProduit(payload: CommandeProduitCreatePayload): Promise<CommandeProduit> {
+export async function createCommandeProduit(payload: CommandeProduitCreatePayload): Promise<{ success: boolean; data: CommandeProduit }> {
+  console.log("Payload de création de commande produit :", payload);
+  
   const response = await fetch(COMMANDE_PRODUIT_API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -44,15 +72,19 @@ export async function createCommandeProduit(payload: CommandeProduitCreatePayloa
     throw new Error(`Échec de la création de la ligne de produit : ${errorDetail}`);
   }
 
-  return response.json(); // Retourne l'objet CommandeProduit créé
+  const result = await response.json();
+  if (!result.success) {
+    throw new Error('Erreur lors de la création de la ligne de commande');
+  }
+
+  return result;
 }
 
 // =======================================================
-// UPDATE : Mettre à jour une ligne existante (PUT /api/commande-produits/commande/{commandeId}/produit/{produitId})
+// UPDATE : Mettre à jour une ligne existante par son ID
 // =======================================================
-// On utilise 'Partial' car on n'a besoin que des champs à modifier (quantite, prixUnitaire)
-export async function updateCommandeProduit(commandeId: number, produitId: number, updatedData: Partial<CommandeProduit>): Promise<CommandeProduit> {
-  const url = `${COMMANDE_PRODUIT_API_URL}/commande/${commandeId}/produit/${produitId}`;
+export async function updateCommandeProduit(id: number, updatedData: Partial<CommandeProduit>): Promise<{ success: boolean; data: CommandeProduit }> {
+  const url = `${COMMANDE_PRODUIT_API_URL}/${id}/`;
   const response = await fetch(url, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -61,23 +93,40 @@ export async function updateCommandeProduit(commandeId: number, produitId: numbe
 
   if (!response.ok) {
     const errorDetail = await response.text();
-    throw new Error(`Échec de la mise à jour de la ligne (${commandeId}, ${produitId}) : ${errorDetail}`);
+    throw new Error(`Échec de la mise à jour de la ligne ${id} : ${errorDetail}`);
   }
 
-  return response.json();
+  const result = await response.json();
+  if (!result.success) {
+    throw new Error('Erreur lors de la mise à jour de la ligne de commande');
+  }
+
+  return result;
 }
 
 // =======================================================
-// DELETE : Supprimer une ligne par clé composée (DELETE /api/commande-produits/commande/{commandeId}/produit/{produitId})
+// DELETE : Supprimer une ligne par son ID
 // =======================================================
-export async function deleteCommandeProduit(commandeId: number, produitId: number): Promise<void> {
-  const url = `${COMMANDE_PRODUIT_API_URL}/commande/${commandeId}/produit/${produitId}`;
+export async function deleteCommandeProduit(id: number): Promise<void> {
+  const url = `${COMMANDE_PRODUIT_API_URL}/${id}/`;
   const response = await fetch(url, {
     method: 'DELETE',
   });
 
   if (!response.ok) {
-    throw new Error(`Échec de la suppression de la ligne (${commandeId}, ${produitId}) : ${response.statusText}`);
+    throw new Error(`Échec de la suppression de la ligne ${id} : ${response.statusText}`);
   }
-  // Si la suppression réussit, la fonction ne retourne rien (void)
+}
+
+// =======================================================
+// DELETE : Supprimer toutes les lignes de commande
+// =======================================================
+export async function deleteAllCommandeProduits(): Promise<void> {
+  const response = await fetch(COMMANDE_PRODUIT_API_URL, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Échec de la suppression de toutes les lignes : ${response.statusText}`);
+  }
 }

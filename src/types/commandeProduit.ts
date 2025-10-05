@@ -1,39 +1,27 @@
-import type { Produit } from './produit'; // Le type du Produit (que vous avez déjà défini)
-import type { Commande } from './commande'; // Le type de la commande (que nous avons défini précédemment)
-
-/**
- * Représente une ligne de détail dans une commande (un article spécifique commandé).
- */
-export type CommandeProduit = {
-  /**
-   * L'objet Commande auquel cette ligne appartient.
-   * Souvent inclus lors de la récupération d'une ligne spécifique, mais parfois juste l'ID est suffisant.
-   */
-  commande: Commande;
-
-  /**
-   * L'objet Produit commandé.
-   * Contient les détails du Produit au moment de la commande (relation ManyToOne).
-   */
-  Produit: Produit;
-
-  /**
-   * La quantité commandée de ce Produit.
-   */
+// types/commandeProduit.ts
+export interface CommandeProduit {
+  id?: number; // ID de la relation (clé primaire)
+  id_commande: number; // Référence à la commande
+  id_produit: number; // Référence au produit
   quantite: number;
-
-  /**
-   * Le prix auquel ce Produit a été vendu pour cette commande (très important : il doit être fixe).
-   */
-  prixUnitaire: number;
-};
-
-export type CommandeProduitCreatePayload = {
-    // Les IDs qui forment la clé composée
-    idCommande: number;
-    idProduit: number; 
+  prix_unitaire: number;
   
-    // Les données de la ligne
-    quantite: number;
-    prixUnitaire: number;
+  // Champs optionnels pour les données liées (si votre serializer les inclut)
+  commande_details?: {
+    id_commande: number;
+    date_commande: string;
+    total: number;
   };
+  produit_details?: {
+    id_produit: number;
+    nom_produit: string;
+    description: string;
+  };
+}
+
+export interface CommandeProduitCreatePayload {
+  id_commande: number;
+  id_produit: number;
+  quantite: number;
+  prix_unitaire: number;
+}
