@@ -8,7 +8,7 @@ import type {
   LoginResponse 
 } from '../types/utilisateur';
 
-const UTILISATEUR_API_URL = `${API_BASE_URL}/utilisateurs/`;
+const UTILISATEUR_API_URL = `${API_BASE_URL}/utilisateurs`;
 
 export interface UtilisateurFilters {
   nom?: string;

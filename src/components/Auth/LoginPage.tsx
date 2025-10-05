@@ -1,11 +1,10 @@
 // LoginPage.tsx
 import { type FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-// Assurez-vous que le chemin d'importation est correct
-import { authenticateUser } from "../../controllers/authController"; 
+import { loginUtilisateur, saveUserToLocalStorage } from "../../controllers/utilisateurController"; 
 import "../../styles/auth.css";
 
-type UserRole = "admin" | "delivery";
+type UserRole = "admin" | "livreur";
 
 type RoleOption = {
   value: UserRole;
@@ -20,7 +19,7 @@ const roleOptions: RoleOption[] = [
     description: "Gérez l'inventaire, les commandes et les rapports.",
   },
   {
-    value: "delivery",
+    value: "livreur",
     label: "Livreur",
     description: "Scanner les QR codes pour récupérer les colis.",
   },
@@ -48,28 +47,62 @@ export function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Appel du Contrôleur pour l'authentification via API
-      const user = await authenticateUser(email.trim(), password.trim(), role);
+      // Appel du contrôleur pour l'authentification via API Django
+      const result = await loginUtilisateur({
+        email: email.trim(),
+        mot_de_passe: password.trim()
+      });
 
-      if (user) {
-        // Authentification réussie
+      if (result.success && result.data) {
+        const user = result.data;
+        
+        // Vérifier que le rôle de l'utilisateur correspond au rôle sélectionné
+        // if (user.role !== role) {
+        //   setFeedback(`Cet utilisateur n'a pas les droits ${role}. Rôle actuel: ${user.role}`);
+        //   setIsLoading(false);
+        //   return;
+        // }
+
+        // Vérifier que l'utilisateur est actif
+        if (!user.status) {
+          setFeedback("Votre compte est désactivé. Contactez l'administrateur.");
+          setIsLoading(false);
+          return;
+        }
+
+        // Sauvegarder l'utilisateur dans le localStorage
+        saveUserToLocalStorage(user);
+
+        // Redirection selon le rôle
         if (user.role === 'admin') {
           navigate("/admin");
-        } else if (user.role === 'delivery') {
-          // Note : Le rôle dans l'objet User est 'Livreur'
+        } else if (user.role === 'livreur') {
           navigate("/delivery", { state: { operator: user.email } });
         }
+        
       } else {
-      
-        // Échec de l'authentification (identifiants invalides ou erreur API gérée)
-        setFeedback("Échec de la connexion. Vérifiez votre email, votre mot de passe et le rôle sélectionné.");
+        // Échec de l'authentification
+        setFeedback(result.message || "Échec de la connexion. Vérifiez vos identifiants.");
       }
-    } catch (error) {
-      // Cas peu probable car le contrôleur catch déjà les erreurs, mais bonne pratique
-      setFeedback("Une erreur inattendue est survenue. Veuillez réessayer.");
+    } catch (error: any) {
+      // Gestion des erreurs
+      setFeedback(error.message || "Une erreur inattendue est survenue. Veuillez réessayer.");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Fonction pour réinitialiser le formulaire
+  const resetForm = () => {
+    setEmail("");
+    setPassword("");
+    setFeedback("");
+  };
+
+  // Quand le rôle change, réinitialiser le formulaire
+  const handleRoleChange = (newRole: UserRole) => {
+    setRole(newRole);
+    resetForm();
   };
 
   return (
@@ -99,7 +132,7 @@ export function LoginPage() {
                   key={option.value}
                   type="button"
                   className={isSelected ? "role-button selected" : "role-button"}
-                  onClick={() => setRole(option.value)}
+                  onClick={() => handleRoleChange(option.value)}
                   role="tab"
                   aria-selected={isSelected}
                   disabled={isLoading}
@@ -122,6 +155,7 @@ export function LoginPage() {
                 placeholder="prenom.nom@entreprise.com"
                 required
                 disabled={isLoading}
+                autoComplete="email"
               />
             </label>
 
@@ -135,10 +169,15 @@ export function LoginPage() {
                 placeholder="Votre mot de passe"
                 required
                 disabled={isLoading}
+                autoComplete="current-password"
               />
             </label>
 
-            {feedback ? <p className="auth-feedback">{feedback}</p> : null}
+            {feedback && (
+              <div className={`auth-feedback ${feedback.includes("succès") ? "success" : "error"}`}>
+                {feedback}
+              </div>
+            )}
 
             <button 
               className="auth-submit" 
@@ -147,7 +186,7 @@ export function LoginPage() {
             >
               {isLoading 
                 ? "Connexion en cours..." 
-                : `Continuer vers l'espace ${role === "admin" ? "administrateur" : "livreur"}`}
+                : `Se connecter"}`}
             </button>
           </form>
 
@@ -155,6 +194,13 @@ export function LoginPage() {
             <Link className="auth-link" to="/">
               ← Retour à la boutique
             </Link>
+            
+            {/* Information de test (optionnel - à supprimer en production) */}
+            <div className="auth-info">
+              <small>
+                <strong>Test :</strong> Utilisez les utilisateurs créés dans votre base de données Django
+              </small>
+            </div>
           </div>
         </div>
       </div>
