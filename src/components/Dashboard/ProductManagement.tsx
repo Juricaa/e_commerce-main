@@ -20,9 +20,11 @@ import {
   getAllProducts,
   createProduct,
   updateProduct,
+  updateProductWithFormData,
   deleteProduct,
   updateProductWithInventory,
 } from "../../controllers/produitController";
+import { API_BASE_image } from "../../controllers/baseUrl";
 
 // Configuration des options de catégorie
 const categoryOptions = [
@@ -105,7 +107,7 @@ export function ProductManagement() {
       prix: product.prix.toString(),
       stock: product.stock.toString(),
       categorie: product.categorie,
-      image: null, // Don't change image during edit
+      image: null, // Nouvelle image optionnelle lors de l'édition
     });
     setIsModalOpen(true);
   };
@@ -140,22 +142,42 @@ export function ProductManagement() {
     setIsLoading(true);
     try {
       if (editingProduct) {
-        // MODE MISE À JOUR - toujours JSON pour les mises à jour (pas de changement d'image)
-        const payload = {
-          nom_produit: formData.nom_produit,
-          description: formData.description,
-          prix: parseFloat(formData.prix),
-          stock: parseInt(formData.stock),
-          categorie: formData.categorie,
-          // Ne pas inclure l'image pour les mises à jour
-        };
+        // MODE MISE À JOUR
+        if (formData.image) {
+          // Avec nouvelle image - utiliser FormData
+          const formDataToSend = new FormData();
+          formDataToSend.append('nom_produit', formData.nom_produit);
+          formDataToSend.append('description', formData.description);
+          formDataToSend.append('prix', formData.prix);
+          formDataToSend.append('stock', formData.stock.toString());
+          formDataToSend.append('categorie', formData.categorie);
+          formDataToSend.append('image', formData.image);
 
-        const result = await updateProductWithInventory(editingProduct.id_produit, payload);
-        if (result.success) {
-          await fetchProducts();
-          setIsModalOpen(false);
+          const result = await updateProductWithFormData(editingProduct.id_produit, formDataToSend);
+          if (result.success) {
+            await fetchProducts();
+            setIsModalOpen(false);
+          } else {
+            alert("Erreur lors de la mise à jour du produit.");
+          }
         } else {
-          alert("Erreur lors de la mise à jour du produit.");
+          // Sans nouvelle image - utiliser JSON
+          const payload = {
+            nom_produit: formData.nom_produit,
+            description: formData.description,
+            prix: parseFloat(formData.prix),
+            stock: parseInt(formData.stock),
+            categorie: formData.categorie,
+            // Garder l'image existante
+          };
+
+          const result = await updateProductWithInventory(editingProduct.id_produit, payload);
+          if (result.success) {
+            await fetchProducts();
+            setIsModalOpen(false);
+          } else {
+            alert("Erreur lors de la mise à jour du produit.");
+          }
         }
       } else {
         // MODE CRÉATION
@@ -220,7 +242,7 @@ export function ProductManagement() {
     product.categorie,
     product.image ? (
       <img
-        src={product.image}
+        src={`${API_BASE_image}${product.image}`}
         alt={product.nom_produit}
         style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }}
       />
@@ -340,7 +362,7 @@ export function ProductManagement() {
                   type="file"
                   id="image"
                   name="image"
-                  accept="image/png, image/jpeg, image/webp"
+                  accept="image/png, image/jpeg, image/webp, image/jpg"
                   onChange={handleFileChange}
                   style={{ marginBottom: '8px' }}
                 />

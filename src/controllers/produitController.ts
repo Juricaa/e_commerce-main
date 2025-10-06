@@ -126,7 +126,7 @@ export async function createProduct(productData: NewProductData | FormData): Pro
 export async function updateProduct(idProduit: string | number, productData: UpdateProductData): Promise<{ success: boolean; data: Produit }> {
   const url = `${PRODUIT_API_URL}${idProduit}/`;
   console.log("Updating product with data:", productData);
-  
+
   try {
     const response = await fetch(url, {
       method: 'PUT',
@@ -136,6 +136,38 @@ export async function updateProduct(idProduit: string | number, productData: Upd
 
     if (!response.ok) {
       throw new Error(`Erreur API lors de la mise à jour du produit: ${response.status}`);
+    }
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error('Erreur lors de la mise à jour du produit');
+    }
+
+    return result;
+
+  } catch (error) {
+    console.error(`Erreur réseau ou API lors de la mise à jour du produit ${idProduit}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Met à jour un produit existant avec FormData (pour les images) via l'API (PUT).
+ */
+export async function updateProductWithFormData(idProduit: string | number, formData: FormData): Promise<{ success: boolean; data: Produit }> {
+  const url = `${PRODUIT_API_URL}${idProduit}/`;
+  console.log("Updating product with FormData:", formData);
+
+  try {
+    const response = await fetch(url, {
+      method: 'PUT',
+      // Ne pas définir Content-Type pour FormData - le navigateur gère automatiquement
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.json();
+      throw new Error(`Erreur API lors de la mise à jour du produit: ${response.status} - ${JSON.stringify(errorBody)}`);
     }
 
     const result = await response.json();

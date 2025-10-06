@@ -9,6 +9,7 @@ import type { Produit } from "../../types/produit";
 
 // Importation des contrôleurs
 import { getAllProducts } from "../../controllers/produitController";
+import { API_BASE_image } from "../../controllers/baseUrl";
 
 // =======================================================
 // TYPES LOCAUX ET CONSTANTES
@@ -204,7 +205,8 @@ export function Storefront() {
               {filteredProducts.map((product) => (
                 <article key={product.id_produit} className="product-card">
                   <div className="product-image-wrapper">
-                    <img src={product.image || "/placeholder-image.jpg"} alt={product.nom_produit} />
+                    
+                    <img   src={`${API_BASE_image}${product.image}`  || "/placeholder-image.jpg"} alt={product.nom_produit} />
                     {product.stock <= 0 && (
                       <div className="stock-badge out-of-stock">Rupture</div>
                     )}
