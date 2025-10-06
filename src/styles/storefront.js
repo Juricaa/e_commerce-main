@@ -239,6 +239,30 @@ export default StyleSheet.create({
     'maxWidth': [{ 'unit': 'px', 'value': 380 }],
     'lineHeight': [{ 'unit': 'px', 'value': 1.7 }]
   },
+  'category-filters': {
+    'display': 'flex',
+    'gap': '12px',
+    'flexWrap': 'wrap',
+    'marginBottom': [{ 'unit': 'px', 'value': 32 }]
+  },
+  'category-filter': {
+    'padding': [{ 'unit': 'px', 'value': 8 }, { 'unit': 'px', 'value': 16 }, { 'unit': 'px', 'value': 8 }, { 'unit': 'px', 'value': 16 }],
+    'border': [{ 'unit': 'px', 'value': 1 }, { 'unit': 'string', 'value': 'solid' }, { 'unit': 'string', 'value': 'rgba(15, 23, 42, 0.12)' }],
+    'borderRadius': '999px',
+    'background': 'transparent',
+    'color': '#0f172a',
+    'fontWeight': '500',
+    'cursor': 'pointer',
+    'transition': 'background 0.2s, color 0.2s'
+  },
+  'category-filter:hover': {
+    'background': 'rgba(15, 23, 42, 0.05)'
+  },
+  'category-filteractive': {
+    'background': '#1d4ed8',
+    'color': '#ffffff',
+    'borderColor': '#1d4ed8'
+  },
   'product-grid': {
     'display': 'grid',
     'gridTemplateColumns': 'repeat(auto-fit, minmax(240px, 1fr))',
@@ -318,7 +342,11 @@ export default StyleSheet.create({
   'checkout-grid': {
     'display': 'grid',
     'gridTemplateColumns': 'minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.9fr)',
-    'gap': '28px'
+    'gap': '28px',
+    '<w768': {
+      'gridTemplateColumns': '1fr',
+      'gap': '24px'
+    }
   },
   'cart-summary': {
     'background': '#ffffff',

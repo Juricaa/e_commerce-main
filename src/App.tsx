@@ -1,11 +1,13 @@
 import "@shopify/polaris/build/esm/styles.css";
 import { AppProvider, Frame } from "@shopify/polaris";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { CartProvider } from "./contexts/CartContext";
 import { Dashboard } from "./components/Dashboard/Dashboard";
 import { Layout } from "./components/Layout";
 import { LoginPage } from "./components/Auth/LoginPage";
 import { DeliveryScanner } from "./components/Delivery/DeliveryScanner";
 import { Storefront } from "./components/Storefront/Storefront";
+import { Checkout } from "./components/Storefront/Checkout";
 import { ProductManagement } from "./components/Dashboard/ProductManagement";
 import { UserManagement } from "./components/Dashboard/UserManagement";
 import { OrderManagement } from "./components/Dashboard/OrderManagement";
@@ -14,13 +16,15 @@ import {InventaireManagement} from "./components/Dashboard/InventaireManagement"
 
 function App() {
   return (
-    <AppProvider i18n={{}}>
-      <BrowserRouter>
-        <Frame>
-          <Routes>
+    <CartProvider>
+      <AppProvider i18n={{}}>
+        <BrowserRouter>
+          <Frame>
+            <Routes>
             <Route path="/" element={<Storefront />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/delivery" element={<DeliveryScanner />} />
+            <Route path="/checkout" element={<Checkout />} />
             <Route
               path="/admin"
               element={
@@ -73,6 +77,7 @@ function App() {
         </Frame>
       </BrowserRouter>
     </AppProvider>
+    </CartProvider>
   );
 }
 

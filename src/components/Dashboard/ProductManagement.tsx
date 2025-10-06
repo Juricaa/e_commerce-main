@@ -62,7 +62,7 @@ export function ProductManagement() {
     try {
       const result = await getAllProducts();
       console.log("Réponse API:", result); // Debug
-      
+
       // Vérification robuste de la structure de réponse
       if (result && result.success && Array.isArray(result.data)) {
         setProducts(result.data);
@@ -144,7 +144,7 @@ export function ProductManagement() {
 
       if (editingProduct) {
         // MODE MISE À JOUR
-        const result = await updateProductWithInventory(editingProduct.id_produit, payload, );
+        const result = await updateProductWithInventory(editingProduct.id_produit, payload,);
         if (result.success) {
           await fetchProducts();
           setIsModalOpen(false);
@@ -173,20 +173,20 @@ export function ProductManagement() {
   const rows = Array.isArray(products) ? products.map((product) => [
     product.id_produit,
     product.nom_produit,
-    product.description.length > 50 
-      ? `${product.description.substring(0, 50)}...` 
+    product.description.length > 50
+      ? `${product.description.substring(0, 50)}...`
       : product.description,
     `${parseFloat(product.prix.toString()).toFixed(2)} Ar`,
-    <Badge 
+    <Badge
       tone={product.stock > 10 ? "success" : product.stock > 0 ? "warning" : "critical"}
     >
       {product.stock} en stock
     </Badge>,
     product.categorie,
     product.image ? (
-      <img 
-        src={product.image} 
-        alt={product.nom_produit} 
+      <img
+        src={product.image}
+        alt={product.nom_produit}
         style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }}
       />
     ) : (
@@ -265,7 +265,7 @@ export function ProductManagement() {
                 value={formData.nom_produit}
                 onChange={(value) => setFormData({ ...formData, nom_produit: value })}
                 autoComplete="off"
-            
+
               />
               <TextField
                 label="Description"
@@ -273,7 +273,7 @@ export function ProductManagement() {
                 onChange={(value) => setFormData({ ...formData, description: value })}
                 multiline={3}
                 autoComplete="off"
-              
+
               />
               <TextField
                 label="Prix (Ar)"
@@ -282,7 +282,7 @@ export function ProductManagement() {
                 onChange={(value) => setFormData({ ...formData, prix: value })}
                 prefix="Ar"
                 autoComplete="off"
-          
+
               />
               <TextField
                 label="Stock"
@@ -290,7 +290,7 @@ export function ProductManagement() {
                 value={formData.stock}
                 onChange={(value) => setFormData({ ...formData, stock: value })}
                 autoComplete="off"
-            
+
               />
               <TextField
                 label="Catégorie"
@@ -299,14 +299,17 @@ export function ProductManagement() {
                 onChange={(value) => setFormData({ ...formData, categorie: value })}
                 autoComplete=""
               />
-              <TextField
-                label="URL de l'image"
-                value={formData.image}
-                onChange={(value) => setFormData({ ...formData, image: value })}
-                autoComplete="off"
-                placeholder="https://example.com/image.jpg"
-                helpText="Optionnel - URL de l'image du produit"
-              />
+              <form>
+                <label >Choisir une image :</label>
+                <input
+                  type="file"
+                  id="avatar"
+                  name="avatar"
+                  accept="image/png, image/jpeg, image/webp"
+                />
+               
+              </form>
+
             </FormLayout>
           </Form>
         </Modal.Section>
