@@ -39,17 +39,16 @@ def produit_list(request):
 
     # CREATE
     elif request.method == 'POST':
-        data = JSONParser().parse(request)
-        serializer = ProduitSerializer(data=data)
+        serializer = ProduitSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return JsonResponse(
                 {
                     'success': True,
                     'data': serializer.data
-                 
+
                  },status=status.HTTP_200_OK)
-        print(serializer.errors) 
+        print(serializer.errors)
         return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     # DELETE ALL

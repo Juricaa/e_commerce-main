@@ -25,8 +25,7 @@ class Produit(models.Model):
     stock = models.PositiveIntegerField()
     categorie = models.CharField(max_length=100)
     date_ajout = models.DateTimeField(default=timezone.now)
-    image = models.URLField(max_length=500, blank=True, null=True)
-    # imageUpload= models.ImageField(upload_to='images/', blank=True, null=True)
+    image = models.ImageField(upload_to='images/', blank=True, null=True)
 
     class Meta:
         db_table = 'produits'
