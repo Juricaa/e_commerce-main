@@ -39,7 +39,7 @@ interface FormData {
   prix: string;
   stock: string;
   categorie: string;
-  image: string;
+  image: File | null;
 }
 
 export function ProductManagement() {
@@ -53,7 +53,7 @@ export function ProductManagement() {
     prix: "",
     stock: "",
     categorie: "autre",
-    image: "",
+    image: null,
   });
 
   // Récupérer tous les produits avec gestion d'erreur
@@ -91,7 +91,7 @@ export function ProductManagement() {
       prix: "",
       stock: "",
       categorie: "autre",
-      image: "",
+      image: null,
     });
     setIsModalOpen(true);
   };
@@ -105,13 +105,13 @@ export function ProductManagement() {
       prix: product.prix.toString(),
       stock: product.stock.toString(),
       categorie: product.categorie,
-      image: product.image || "",
+      image: null, // Don't change image during edit
     });
     setIsModalOpen(true);
   };
 
   // Gère la suppression d'un produit
-  const handleDeleteProduct = async (id: string) => {
+  const handleDeleteProduct = async (id: string | number) => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer ce produit ?")) {
       try {
         await deleteProduct(id);
@@ -124,6 +124,12 @@ export function ProductManagement() {
     }
   };
 
+  // Gestionnaire de changement de fichier
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+    setFormData({ ...formData, image: file });
+  };
+
   // Sauvegarde/Mise à jour d'un produit
   const handleSaveProduct = async () => {
     if (!formData.nom_produit || !formData.description || !formData.prix || !formData.stock) {
@@ -133,18 +139,18 @@ export function ProductManagement() {
 
     setIsLoading(true);
     try {
-      const payload = {
-        nom_produit: formData.nom_produit,
-        description: formData.description,
-        prix: parseFloat(formData.prix),
-        stock: parseInt(formData.stock),
-        categorie: formData.categorie,
-        image: formData.image || null,
-      };
-
       if (editingProduct) {
-        // MODE MISE À JOUR
-        const result = await updateProductWithInventory(editingProduct.id_produit, payload,);
+        // MODE MISE À JOUR - toujours JSON pour les mises à jour (pas de changement d'image)
+        const payload = {
+          nom_produit: formData.nom_produit,
+          description: formData.description,
+          prix: parseFloat(formData.prix),
+          stock: parseInt(formData.stock),
+          categorie: formData.categorie,
+          // Ne pas inclure l'image pour les mises à jour
+        };
+
+        const result = await updateProductWithInventory(editingProduct.id_produit, payload);
         if (result.success) {
           await fetchProducts();
           setIsModalOpen(false);
@@ -153,12 +159,41 @@ export function ProductManagement() {
         }
       } else {
         // MODE CRÉATION
-        const result = await createProduct(payload);
-        if (result.success) {
-          await fetchProducts();
-          setIsModalOpen(false);
+        if (formData.image) {
+          // Avec fichier - utiliser FormData
+          const formDataToSend = new FormData();
+          formDataToSend.append('nom_produit', formData.nom_produit);
+          formDataToSend.append('description', formData.description);
+          formDataToSend.append('prix', formData.prix);
+          formDataToSend.append('stock', formData.stock.toString());
+          formDataToSend.append('categorie', formData.categorie);
+          formDataToSend.append('image', formData.image);
+
+          const result = await createProduct(formDataToSend);
+          if (result.success) {
+            await fetchProducts();
+            setIsModalOpen(false);
+          } else {
+            alert("Erreur lors de la création du produit.");
+          }
         } else {
-          alert("Erreur lors de la création du produit.");
+          // Sans fichier - utiliser JSON
+          const payload = {
+            nom_produit: formData.nom_produit,
+            description: formData.description,
+            prix: parseFloat(formData.prix),
+            stock: parseInt(formData.stock),
+            categorie: formData.categorie,
+            image: null,
+          };
+
+          const result = await createProduct(payload);
+          if (result.success) {
+            await fetchProducts();
+            setIsModalOpen(false);
+          } else {
+            alert("Erreur lors de la création du produit.");
+          }
         }
       }
     } catch (error) {
@@ -193,7 +228,7 @@ export function ProductManagement() {
       <Text as="span" tone="subdued">Aucune image</Text>
     ),
     new Date(product.date_ajout).toLocaleDateString('fr-FR'),
-    <div key={product.id_produit} style={{ display: "flex", gap: "8px" }}>
+    <div key={product.id_produit.toString()} style={{ display: "flex", gap: "8px" }}>
       <Button
         size="slim"
         icon={EditIcon}
@@ -299,16 +334,22 @@ export function ProductManagement() {
                 onChange={(value) => setFormData({ ...formData, categorie: value })}
                 autoComplete=""
               />
-              <form>
-                <label >Choisir une image :</label>
+              <div>
+                <label style={{ display: 'block', marginBottom: '4px' }}>Choisir une image :</label>
                 <input
                   type="file"
-                  id="avatar"
-                  name="avatar"
+                  id="image"
+                  name="image"
                   accept="image/png, image/jpeg, image/webp"
+                  onChange={handleFileChange}
+                  style={{ marginBottom: '8px' }}
                 />
-               
-              </form>
+                {formData.image && (
+                  <Text as="span" tone="subdued">
+                    Fichier sélectionné: {formData.image.name}
+                  </Text>
+                )}
+              </div>
 
             </FormLayout>
           </Form>

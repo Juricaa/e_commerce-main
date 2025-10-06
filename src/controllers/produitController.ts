@@ -54,7 +54,7 @@ export async function getAllProducts(filters?: ProduitFilters): Promise<{ succes
 /**
  * Récupère un produit par son ID.
  */
-export async function getProductById(id: string): Promise<{ success: boolean; data: Produit }> {
+export async function getProductById(id: string | number): Promise<{ success: boolean; data: Produit }> {
   const url = `${PRODUIT_API_URL}${id}/`;
   
   try {
@@ -81,14 +81,25 @@ export async function getProductById(id: string): Promise<{ success: boolean; da
 /**
  * Crée un nouveau produit via l'API (POST).
  */
-export async function createProduct(productData: NewProductData): Promise<{ success: boolean; data: Produit }> {
+export async function createProduct(productData: NewProductData | FormData): Promise<{ success: boolean; data: Produit }> {
   console.log("Payload de création de produit :", productData);
-  
+
   try {
+    let headers: Record<string, string> = {};
+    let body: string | FormData;
+
+    if (productData instanceof FormData) {
+      // For file uploads, don't set Content-Type header - let browser set it with boundary
+      body = productData;
+    } else {
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify(productData);
+    }
+
     const response = await fetch(PRODUIT_API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(productData)
+      headers,
+      body
     });
 
     if (!response.ok) {
@@ -112,7 +123,7 @@ export async function createProduct(productData: NewProductData): Promise<{ succ
 /**
  * Met à jour un produit existant via l'API (PUT).
  */
-export async function updateProduct(idProduit: string, productData: UpdateProductData): Promise<{ success: boolean; data: Produit }> {
+export async function updateProduct(idProduit: string | number, productData: UpdateProductData): Promise<{ success: boolean; data: Produit }> {
   const url = `${PRODUIT_API_URL}${idProduit}/`;
   console.log("Updating product with data:", productData);
   
@@ -143,7 +154,7 @@ export async function updateProduct(idProduit: string, productData: UpdateProduc
 /**
  * Supprime un produit via l'API (DELETE).
  */
-export async function deleteProduct(idProduit: string): Promise<void> {
+export async function deleteProduct(idProduit: string | number): Promise<void> {
   const url = `${PRODUIT_API_URL}${idProduit}/`;
   
   try {
@@ -229,7 +240,7 @@ export async function createProductWithInventory(productData: NewProductData): P
  * Met à jour un produit avec gestion d'inventaire pour les changements de stock
  */
 export async function updateProductWithInventory(
-  idProduit: string, 
+  idProduit: string | number,
   productData: UpdateProductData,
   ancienProduit?: Produit
 ): Promise<{ success: boolean; data: Produit }> {
@@ -267,7 +278,7 @@ export async function updateProductWithInventory(
  * Fonction utilitaire pour récupérer un produit avant mise à jour
  */
 export async function getProductAndUpdateWithInventory(
-  idProduit: string, 
+  idProduit: string | number,
   productData: UpdateProductData
 ): Promise<{ success: boolean; data: Produit }> {
   
@@ -292,7 +303,7 @@ export async function getProductAndUpdateWithInventory(
  * Réapprovisionne un produit avec mouvement d'inventaire
  */
 export async function restockProduct(
-  idProduit: string, 
+  idProduit: string | number,
   quantiteAjoutee: number,
   motif: string = 'Réapprovisionnement manuel'
 ): Promise<{ success: boolean; data: Produit }> {

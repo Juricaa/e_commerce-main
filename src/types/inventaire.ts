@@ -5,11 +5,11 @@ export interface Inventory {
   quantite: number;
   date_mouvement: string;
   commentaire?: string | null;
-  id_produit: string;
-  
+  id_produit: string | number;
+
   // Champs optionnels pour les données liées (si votre serializer les inclut)
   produit_details?: {
-    id_produit: string;
+    id_produit: string | number;
     nom_produit: string;
     prix: number;
     stock: number;

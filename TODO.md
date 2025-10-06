@@ -6,7 +6,7 @@
 - [x] Update ProduitSerializer to handle image files
 - [x] Add MultiPartParser to REST_FRAMEWORK settings
 - [x] Configure MEDIA_URL and MEDIA_ROOT in settings.py
-- [x] Update services.py to handle multipart/form-data for POST/PUT requests
-- [x] Update URLs to serve media files
+- [ ] Update services.py to handle multipart/form-data for POST/PUT requests
+- [ ] Update URLs to serve media files
 - [ ] Create and run migrations for model changes
 - [ ] Test image upload functionality

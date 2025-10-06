@@ -206,8 +206,8 @@ export async function getInventoryByDateRange(date_debut: string, date_fin: stri
 
 
 export async function createInventoryEntryForNewProduct(
-  id_produit: string, 
-  quantite: number, 
+  id_produit: string | number,
+  quantite: number,
   nom_produit: string
 ): Promise<{ success: boolean; data: any }> {
   
@@ -226,8 +226,8 @@ export async function createInventoryEntryForNewProduct(
  * Crée un mouvement d'entrée en inventaire pour un réapprovisionnement
  */
 export async function createInventoryEntryForStockUpdate(
-  id_produit: string, 
-  quantite_ajoutee: number, 
+  id_produit: string | number,
+  quantite_ajoutee: number,
   ancien_stock: number,
   nouveau_stock: number,
   motif: string = 'Réapprovisionnement'
